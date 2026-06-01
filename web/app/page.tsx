@@ -518,7 +518,7 @@ export default function Home() {
   if (loading) {
     return (
       <Theme theme="g100">
-        <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white">
+        <div className="min-h-screen bg-[#0c0c0c] flex flex-col items-center justify-center text-white">
           <Loading withOverlay={false} description="Carregando..." />
           <p className="text-gray-400 font-semibold mt-4">Carregando Bolão da Copa...</p>
         </div>
@@ -530,7 +530,7 @@ export default function Home() {
   if (registrationPendingUser) {
     return (
       <Theme theme="g100">
-        <main className="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased flex flex-col items-center justify-center p-4">
+        <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased flex flex-col items-center justify-center p-4">
           <div className="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 shadow-2xl relative overflow-hidden">
             {/* Background elements */}
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>
@@ -593,7 +593,7 @@ export default function Home() {
   if (!loggedUser) {
     return (
       <Theme theme="g100">
-        <main className="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased">
+        <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased">
           {/* Carbon Header */}
           <Header aria-label="Bolão Copa 2026">
             <HeaderName href="#" prefix="">
@@ -602,16 +602,16 @@ export default function Home() {
           </Header>
 
           {/* Hero Section */}
-          <section className="relative bg-gradient-to-b from-slate-900 to-gray-950 pt-28 pb-16 border-b border-gray-900 overflow-hidden">
+          <section className="relative bg-[#161616] pt-28 pb-16 border-b border-gray-900 overflow-hidden">
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_70%,transparent_100%)] opacity-10"></div>
             
             <div className="container mx-auto px-4 max-w-4xl text-center relative z-10">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-6">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-6">
                 ⚽ Copa do Mundo 2026
               </span>
               
               <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6 leading-none">
-                Participe do Nosso <span className="text-indigo-400">Bolão da Copa</span>
+                Participe do Nosso <span className="text-blue-500">Bolão da Copa</span>
               </h1>
               
               <p className="text-base md:text-lg text-gray-400 max-w-xl mx-auto mb-10 font-medium">
@@ -625,7 +625,7 @@ export default function Home() {
                   onClick={handleGoogleLogin}
                   disabled={authLoading}
                   size="lg"
-                  className="px-8 font-bold border-indigo-600 bg-indigo-600 hover:bg-indigo-700"
+                  className="px-8 font-bold"
                 >
                   {authLoading ? 'Conectando...' : 'Entrar com o Google'}
                 </Button>
@@ -637,14 +637,14 @@ export default function Home() {
           {/* Dashboard Preview Section (Read Only) */}
           <section className="container mx-auto px-4 py-12 max-w-5xl">
             {/* Pot display using Carbon Tile */}
-            <Tile className="glass-card ibm-border-emerald mb-12 p-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <Tile className="glass-card mb-12 p-6 flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left flex items-center gap-3">
                 <div className="p-3 bg-emerald-950/40 text-emerald-400 border border-emerald-500/10 rounded-xl">
                   <Finance size={24} />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white mb-0.5">💰 Valor do Pote Acumulado</h2>
-                  <p className="text-xs text-indigo-400 font-medium">{totalPot.usuarios_pagantes} participantes ativos pagantes.</p>
+                  <p className="text-xs text-blue-400 font-medium">{totalPot.usuarios_pagantes} participantes ativos pagantes.</p>
                 </div>
               </div>
               <div className="text-3xl font-black text-emerald-400 bg-emerald-950/20 px-6 py-3 border border-emerald-500/20">
@@ -725,7 +725,7 @@ export default function Home() {
   // Render Full Betting Dashboard if Authenticated
   return (
     <Theme theme="g100">
-      <main className="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased flex flex-col">
+      <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased flex flex-col">
         {/* Carbon Header */}
         <Header aria-label="Bolão Copa 2026" className="border-b border-gray-900 bg-gray-950/85 backdrop-blur-md">
           <HeaderName href="#" prefix="">
@@ -847,14 +847,40 @@ export default function Home() {
           {/* Main Dashboard Area */}
           <div className="flex-1 overflow-y-auto px-8 py-8 w-full max-w-[1600px] mx-auto">
             {/* Header info in right area with event tabs and real hyperlink link */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-gray-900 pb-4">
-              <div>
-                <h1 className="text-2xl font-black text-white tracking-tight leading-none">Dashboard</h1>
-                <p className="text-xs text-gray-500 mt-1.5 font-medium">Bem-vindo de volta ao Bolão da Copa.</p>
+            <div className="flex flex-col gap-4 mb-8 border-b border-gray-900 pb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h1 className="text-2xl font-black text-white tracking-tight leading-none">Dashboard</h1>
+                  <p className="text-xs text-gray-500 mt-1.5 font-medium">Bem-vindo de volta ao Bolão.</p>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  {loggedUser.is_admin && (
+                    <Button
+                      as={Link}
+                      href="/admin"
+                      kind="ghost"
+                      size="sm"
+                      renderIcon={Settings}
+                      className="text-xs font-semibold px-3 py-1.5 h-8 text-amber-400 hover:text-amber-300 hover:bg-slate-900/40 flex items-center"
+                    >
+                      Painel Admin
+                    </Button>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col text-right">
+                      <span className="text-[9px] text-indigo-400 uppercase font-black tracking-wider leading-none">Conectado como</span>
+                      <span className="text-xs font-bold text-white mt-1">{loggedUser.nome}</span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-sm text-blue-400">
+                      {loggedUser.nome.slice(0,2).toUpperCase()}
+                    </div>
+                  </div>
+                </div>
               </div>
-              
+
               {/* Event Tabs Switcher */}
-              <div className="flex items-center gap-1.5 bg-gray-950/40 p-1 border border-white/5 rounded-lg backdrop-blur-md">
+              <div className="flex items-center gap-1.5 bg-[#161616]/60 p-1 border border-white/5 rounded-lg backdrop-blur-md self-start">
                 <button
                   type="button"
                   onClick={() => setSelectedCompetition('WC')}
@@ -888,28 +914,6 @@ export default function Home() {
                 >
                   ⚽ Brasileirão
                 </button>
-              </div>
-
-              <div className="flex items-center gap-4">
-                {loggedUser.is_admin && (
-                  <Button
-                    as={Link}
-                    href="/admin"
-                    kind="ghost"
-                    size="sm"
-                    renderIcon={Settings}
-                    className="text-xs font-semibold px-3 py-1.5 h-8 text-amber-400 hover:text-amber-300 hover:bg-slate-900/40 flex items-center"
-                  >
-                    Painel Admin
-                  </Button>
-                )}
-                <div className="flex flex-col text-right">
-                  <span className="text-[9px] text-indigo-400 uppercase font-black tracking-wider leading-none">Conectado como</span>
-                  <span className="text-xs font-bold text-white mt-1">{loggedUser.nome}</span>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-sm text-blue-400">
-                  {loggedUser.nome.slice(0,2).toUpperCase()}
-                </div>
               </div>
             </div>
 

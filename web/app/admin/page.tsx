@@ -334,7 +334,7 @@ export default function AdminPage() {
   if (authLoading) {
     return (
       <Theme theme="g100">
-        <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center">
+        <div className="min-h-screen bg-[#0c0c0c] flex flex-col items-center justify-center">
           <Loading withOverlay={false} description="Verificando..." />
           <p className="text-gray-400 font-semibold mt-4">Verificando credenciais de admin...</p>
         </div>
@@ -345,7 +345,7 @@ export default function AdminPage() {
   if (!isAuthorized) {
     return (
       <Theme theme="g100">
-        <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center">
           <div className="text-xl text-red-500 font-bold">Redirecionando...</div>
         </div>
       </Theme>
@@ -354,7 +354,7 @@ export default function AdminPage() {
 
   return (
     <Theme theme="g100">
-      <main className="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased">
+      <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased">
         {/* Carbon Header */}
         <Header aria-label="Painel Admin">
           <HeaderName href="#" prefix="">

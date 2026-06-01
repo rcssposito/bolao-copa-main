@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/admin/pot/total
 // Calculates pot details based on paid users and cota config
 export async function GET() {
