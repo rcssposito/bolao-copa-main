@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
+
+// POST /api/users/login
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { email, nome, code } = body;
+
+    if (!email || !nome) {
+      return NextResponse.json({ error: 'Email e Nome são obrigatórios para login' }, { status: 400 });
+    }
+
+    // Check if user exists by email
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    if (existingUser) {
+      return NextResponse.json(existingUser);
+    }
+
+    // Check if it's the very first user (they become admin automatically and don't need a code)
+    const { count, error: countError } = await supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true });
+
+    if (countError) throw countError;
+    const isFirstUser = count === 0;
+
+    if (isFirstUser) {
+      // Create first user as admin (no group required)
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          nome,
+          email,
+          pagou: false,
+          is_admin: true,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      return NextResponse.json(newUser, { status: 201 });
+    }
+
+    // For new non-admin users, we REQUIRE a valid group code to register
+    if (!code || code.trim() === '') {
+      return NextResponse.json({ 
+        error: 'REGISTRATION_REQUIRED_CODE', 
+        message: 'Código de grupo é obrigatório para novos participantes.' 
+      }, { status: 202 });
+    }
+
+    // Load tags config to validate code
+    const { data: configData, error: configError } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'tags')
+      .maybeSingle();
+
+    if (configError) throw configError;
+
+    if (!configData) {
+      return NextResponse.json({ 
+        error: 'NO_GROUPS_SETUP', 
+        message: 'Nenhum grupo cadastrado no sistema. Contate o administrador.' 
+      }, { status: 400 });
+    }
+
+    const tags = JSON.parse(configData.value);
+    
+    // Find matching tag by code (case-insensitive)
+    const matchingTag = tags.find(
+      (t: { nome: string; codigo: string }) => 
+        t.codigo.trim().toLowerCase() === code.trim().toLowerCase()
+    );
+
+    if (!matchingTag) {
+      return NextResponse.json({ 
+        error: 'INVALID_GROUP_CODE', 
+        message: 'Código de grupo inválido ou inexistente.' 
+      }, { status: 400 });
+    }
+
+    // Create new user record associated with the group
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        nome,
+        email,
+        grupo: matchingTag.nome,
+        pagou: false,
+        is_admin: false,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+    return NextResponse.json(newUser, { status: 201 });
+
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
