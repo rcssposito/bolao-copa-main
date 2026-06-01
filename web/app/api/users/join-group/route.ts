@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // POST /api/users/join-group
 // Manages user group memberships (supports multiple comma-separated groups)
 export async function POST(request: NextRequest) {
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (error) throw error;
-      return NextResponse.json(data);
+      return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
     }
 
     // Default action: join / change group
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
         .eq('id', userId)
         .single();
       if (fetchFullErr) throw fetchFullErr;
-      return NextResponse.json(fullUser);
+      return NextResponse.json(fullUser, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
     }
 
     // Append to group list
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     if (updateError) throw updateError;
 
-    return NextResponse.json(updatedUser);
+    return NextResponse.json(updatedUser, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

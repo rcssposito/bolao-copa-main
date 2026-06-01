@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/users
 export async function GET() {
   try {
@@ -10,7 +12,7 @@ export async function GET() {
       .order('nome');
 
     if (error) throw error;
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
-    return NextResponse.json(data, { status: 210 }); // Return created user
+    return NextResponse.json(data, { status: 210, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }); // Return created user
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

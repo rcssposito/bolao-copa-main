@@ -66,7 +66,7 @@ export const getUsers = () => api.get<User[]>('/users')
 export const getUser = (id: string) => api.get<User>(`/users/${id}`)
 export const createUser = (data: Partial<User>) => api.post<User>('/users', data)
 export const updateUser = (id: string, data: Partial<User>) => api.put<User>(`/users/${id}`, data)
-export const deleteUser = (id: string) => api.delete<{ message: string }>(`/users/${id}`)
+export const deleteUser = (id: string) => api.delete<{ message: string }>(`/admin/users/${id}`)
 export const loginUser = (data: { email: string; nome: string; code?: string }) => api.post<User>('/users/login', data)
 
 // Matches
@@ -105,7 +105,8 @@ export const updateUserAdmin = (id: string, data: {
   is_admin?: boolean; 
 }) => api.put<User>(`/admin/users/${id}`, data)
 export const getUsersByGroup = (group: string) => api.get<User[]>(`/admin/users/group/${group}`)
-export const getPotTotal = () => api.get<PotInfo>('/admin/pot/total')
+export const getPotTotal = (group?: string) => 
+  api.get<PotInfo>('/admin/pot/total', { params: group ? { group } : {} })
 export const updatePotValue = (value: string) => api.put('/admin/config/pot', { value })
 export const triggerSync = () => api.post('/admin/sync')
 export const getStats = () => api.get('/admin/stats')
@@ -116,6 +117,7 @@ export const updateActiveCompetition = (code: string) => api.post('/admin/compet
 export interface TagItem {
   nome: string
   codigo: string
+  preco?: number
 }
 export const getTags = () => api.get<TagItem[]>('/admin/tags')
 export const saveTags = (tags: TagItem[]) => api.post<TagItem[]>('/admin/tags', { tags })

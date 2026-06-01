@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // POST /api/users/login
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +23,7 @@ export async function POST(request: NextRequest) {
     if (fetchError) throw fetchError;
 
     if (existingUser) {
-      return NextResponse.json(existingUser);
+      return NextResponse.json(existingUser, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
     }
 
     // Check if it's the very first user (they become admin automatically and don't need a code)
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (insertError) throw insertError;
-      return NextResponse.json(newUser, { status: 201 });
+      return NextResponse.json(newUser, { status: 201, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
     }
 
     let userGroup = null;
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) throw insertError;
-    return NextResponse.json(newUser, { status: 201 });
+    return NextResponse.json(newUser, { status: 201, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

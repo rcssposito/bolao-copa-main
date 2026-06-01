@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // PUT /api/admin/config/pot
 // Update pot cota configuration
 export async function PUT(request: NextRequest) {
@@ -53,7 +55,7 @@ export async function PUT(request: NextRequest) {
       responseData = data;
     }
 
-    return NextResponse.json(responseData);
+    return NextResponse.json(responseData, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -42,15 +42,15 @@ export default function AdminPage() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserGroup, setNewUserGroup] = useState('');
   
-  // Edit user state
-  const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [editGroup, setEditGroup] = useState('');
-
   // Tag (Group) Management State
   const [tags, setTags] = useState<TagItem[]>([]);
   const [newTagName, setNewTagName] = useState('');
   const [newTagCode, setNewTagCode] = useState('');
+  const [newTagPrice, setNewTagPrice] = useState('50');
   const [savingTag, setSavingTag] = useState(false);
+  // Inline price editing state
+  const [editingTagPrice, setEditingTagPrice] = useState<string | null>(null); // tag.codigo being edited
+  const [editTagPriceValue, setEditTagPriceValue] = useState<string>('50');
 
   // Syncing State
   const [syncing, setSyncing] = useState(false);
@@ -192,13 +192,15 @@ export default function AdminPage() {
       return;
     }
 
-    const updatedTags = [...tags, { nome: newTagName.trim(), codigo: newTagCode.trim().toUpperCase() }];
+    const preco = parseFloat(newTagPrice) || 50;
+    const updatedTags = [...tags, { nome: newTagName.trim(), codigo: newTagCode.trim().toUpperCase(), preco }];
     try {
       setSavingTag(true);
       await saveTags(updatedTags);
       setTags(updatedTags);
       setNewTagName('');
       setNewTagCode('');
+      setNewTagPrice('50');
       alert('Grupo cadastrado com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar tag:', error);
@@ -220,6 +222,28 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Erro ao excluir tag:', error);
       alert('Não foi possível excluir o grupo.');
+    } finally {
+      setSavingTag(false);
+    }
+  };
+
+  const updateTagPrice = async (tagCodigo: string, newPrice: string) => {
+    const preco = parseFloat(newPrice);
+    if (isNaN(preco) || preco < 0) {
+      alert('Informe um valor válido.');
+      return;
+    }
+    const updatedTags = tags.map(t =>
+      t.codigo === tagCodigo ? { ...t, preco } : t
+    );
+    try {
+      setSavingTag(true);
+      await saveTags(updatedTags);
+      setTags(updatedTags);
+      setEditingTagPrice(null);
+    } catch (error) {
+      console.error('Erro ao atualizar preço:', error);
+      alert('Não foi possível salvar o preço.');
     } finally {
       setSavingTag(false);
     }
@@ -303,17 +327,6 @@ export default function AdminPage() {
       loadUsers();
     } catch (error) {
       console.error('Erro ao atualizar pagamento:', error);
-    }
-  };
-
-  const updateGroup = async (userId: string) => {
-    try {
-      await updateUserAdmin(userId, { grupo: editGroup || null });
-      setEditingUser(null);
-      setEditGroup('');
-      loadUsers();
-    } catch (error) {
-      console.error('Erro ao atualizar grupo:', error);
     }
   };
 
@@ -546,6 +559,20 @@ export default function AdminPage() {
                       className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
                     />
                   </div>
+                  <div className="flex flex-col gap-1 w-full text-left">
+                    <label htmlFor="new-tagprice" className="text-xs font-bold text-gray-400">Preço de Entrada (R$)</label>
+                    <input
+                      id="new-tagprice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Ex: 50.00"
+                      value={newTagPrice}
+                      onChange={(e) => setNewTagPrice(e.target.value)}
+                      required
+                      className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
+                    />
+                  </div>
                   <button
                     type="submit"
                     disabled={savingTag}
@@ -566,19 +593,65 @@ export default function AdminPage() {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {tags.map((tag) => (
-                        <div key={tag.codigo} className="flex justify-between items-center bg-slate-900/50 p-2.5 border border-gray-800 rounded">
-                          <div>
-                            <div className="text-xs font-bold text-white">{tag.nome}</div>
-                            <div className="text-[10px] text-indigo-400 font-medium mt-0.5">Código: <span className="font-bold text-gray-300">{tag.codigo}</span></div>
+                        <div key={tag.codigo} className="bg-slate-900/50 p-2.5 border border-gray-800 rounded">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-bold text-white">{tag.nome}</div>
+                              <div className="text-[10px] text-indigo-400 font-medium mt-0.5">Código: <span className="font-bold text-gray-300">{tag.codigo}</span></div>
+
+                              {/* Price display / inline edit */}
+                              {editingTagPrice === tag.codigo ? (
+                                <div className="flex items-center gap-1.5 mt-1.5">
+                                  <span className="text-[10px] text-gray-400 shrink-0">R$</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={editTagPriceValue}
+                                    onChange={(e) => setEditTagPriceValue(e.target.value)}
+                                    autoFocus
+                                    className="w-24 h-6 px-1.5 bg-[#0c0c0c] border border-indigo-500/60 focus:border-indigo-400 rounded text-[11px] font-bold text-white outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => updateTagPrice(tag.codigo, editTagPriceValue)}
+                                    disabled={savingTag}
+                                    title="Salvar preço"
+                                    className="h-6 w-6 rounded bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 flex items-center justify-center border border-emerald-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                                  >
+                                    <Checkmark size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingTagPrice(null)}
+                                    title="Cancelar"
+                                    className="h-6 w-6 rounded bg-red-600/10 hover:bg-red-600/20 text-red-400 flex items-center justify-center border border-red-500/10 transition-colors cursor-pointer"
+                                  >
+                                    <Close size={12} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => { setEditingTagPrice(tag.codigo); setEditTagPriceValue(String(tag.preco ?? 50)); }}
+                                  className="mt-1 flex items-center gap-1 text-[10px] text-emerald-400 font-semibold hover:text-emerald-300 transition-colors cursor-pointer bg-transparent border-0 p-0 group"
+                                  title="Clique para editar o preço"
+                                >
+                                  💰 Entrada: R$ {(tag.preco ?? 50).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  <Edit size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => deleteTag(tag.nome)}
+                              title="Excluir grupo"
+                              className="ml-2 h-8 w-8 shrink-0 rounded bg-transparent hover:bg-red-950/30 text-red-400 hover:text-red-300 flex items-center justify-center border border-red-500/10 hover:border-red-500/25 transition-colors cursor-pointer"
+                            >
+                              <TrashCan size={16} />
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => deleteTag(tag.nome)}
-                            title="Excluir grupo"
-                            className="h-8 w-8 rounded bg-transparent hover:bg-red-950/30 text-red-400 hover:text-red-300 flex items-center justify-center border border-red-500/10 hover:border-red-500/25 transition-colors cursor-pointer"
-                          >
-                            <TrashCan size={16} />
-                          </button>
                         </div>
                       ))}
                     </div>
@@ -624,52 +697,14 @@ export default function AdminPage() {
                         <div className="text-xs text-gray-500">{user.email}</div>
                       </td>
 
-                      {/* Group Editing Inline */}
+                      {/* Group — click the Edit button (right column) to change */}
                       <td className="py-3.5 px-6">
-                        {editingUser === user.id ? (
-                          <div className="flex gap-1.5 items-center">
-                            <input
-                              type="text"
-                              value={editGroup}
-                              onChange={(e) => setEditGroup(e.target.value)}
-                              className="px-2 py-1 bg-gray-950 border border-gray-800 text-white rounded text-xs w-20 outline-none focus:ring-1 focus:ring-indigo-500"
-                              placeholder="Grupo"
-                            />
-                            <button
-                              onClick={() => updateGroup(user.id)}
-                              className="text-green-500 hover:text-green-400 p-1"
-                              title="Salvar"
-                            >
-                              <Checkmark size={16} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingUser(null);
-                                setEditGroup('');
-                              }}
-                              className="text-red-500 hover:text-red-400 p-1"
-                              title="Cancelar"
-                            >
-                              <Close size={16} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-200">
-                              {user.grupo || '-'}
-                            </span>
-                            <button
-                              onClick={() => {
-                                setEditingUser(user.id);
-                                setEditGroup(user.grupo || '');
-                              }}
-                              className="text-indigo-400 hover:text-indigo-300 p-1"
-                              title="Editar grupo"
-                            >
-                              <Edit size={14} />
-                            </button>
-                          </div>
-                        )}
+                        <span className="font-semibold text-gray-200 text-xs leading-snug">
+                          {user.grupo
+                            ? user.grupo.split(',').map((g: string) => g.trim()).filter(Boolean).join(', ')
+                            : <span className="text-gray-600 italic">sem grupo</span>
+                          }
+                        </span>
                       </td>
 
                       {/* Points */}
@@ -778,20 +813,36 @@ export default function AdminPage() {
                   />
                 </div>
                 
-                {/* Group dropdown populated with tags */}
+                {/* Group input — free text to support any group name or multiple groups */}
                 <div className="flex flex-col gap-1 w-full text-left">
-                  <label htmlFor="edit-usergroup" className="text-xs font-bold text-gray-400">Grupo / Tag</label>
-                  <select
+                  <label htmlFor="edit-usergroup" className="text-xs font-bold text-gray-400">Grupo(s)</label>
+                  <input
                     id="edit-usergroup"
+                    type="text"
                     value={editUserGroup}
                     onChange={(e) => setEditUserGroup(e.target.value)}
-                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
-                  >
-                    <option value="">Nenhum grupo</option>
-                    {tags.map(t => (
-                      <option key={t.codigo} value={t.nome}>{t.nome}</option>
-                    ))}
-                  </select>
+                    placeholder="Nome do grupo (deixe vazio para remover)"
+                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
+                  />
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      <button type="button" onClick={() => setEditUserGroup('')} className="text-[10px] px-2 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-white border border-gray-700 cursor-pointer transition-colors">Sem grupo</button>
+                      {tags.map(t => (
+                        <button
+                          key={t.codigo}
+                          type="button"
+                          onClick={() => setEditUserGroup(t.nome)}
+                          className={`text-[10px] px-2 py-0.5 rounded border cursor-pointer transition-colors ${
+                            editUserGroup === t.nome
+                              ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300'
+                              : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {t.nome}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Is Admin Toggle */}

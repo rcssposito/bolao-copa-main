@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { calculateScoreDifference } from '@/lib/scoring';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: {
     group: string;
@@ -122,7 +124,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       ranking: rankingUsers,
       total_usuarios: rankingUsers.length
-    });
+    }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // POST /api/bets
 // Create or update a bet (upsert)
 export async function POST(request: NextRequest) {
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

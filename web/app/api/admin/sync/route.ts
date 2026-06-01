@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { fullSync } from '@/lib/sync';
 
+export const dynamic = 'force-dynamic';
+
 // POST /api/admin/sync
 // Run full synchronization of football matches and compute points
 export async function POST() {
@@ -11,7 +13,7 @@ export async function POST() {
     }
 
     const result = await fullSync(apiKey);
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: {
     id: string;
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       throw error;
     }
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -59,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
       throw error;
     }
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

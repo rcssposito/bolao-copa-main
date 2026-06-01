@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { fullSync } from '@/lib/sync';
 import axios from 'axios';
 
+export const dynamic = 'force-dynamic';
+
 const STATIC_COMPETITIONS = [
   { id: 2000, name: 'FIFA World Cup', code: 'WC', emblem: '' },
   { id: 2001, name: 'UEFA Champions League', code: 'CL', emblem: '' },
@@ -63,7 +65,7 @@ export async function GET() {
     return NextResponse.json({
       active: activeCode,
       competitions
-    });
+    }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Competições ativas alteradas para ${value} com sucesso. Por favor, clique em 'Sincronizar' para trazer os novos jogos.`
-    });
+    }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

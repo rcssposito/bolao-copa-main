@@ -12,7 +12,10 @@ export async function GET() {
       .order('nome');
 
     if (error) throw error;
-    return NextResponse.json(data);
+
+    return NextResponse.json(data, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

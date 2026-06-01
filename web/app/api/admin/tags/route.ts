@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/admin/tags
 // Returns the list of tags/groups stored in the 'config' table under key 'tags'
 export async function GET() {
@@ -14,11 +16,11 @@ export async function GET() {
     if (error) throw error;
 
     if (!data) {
-      return NextResponse.json([]);
+      return NextResponse.json([], { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
     }
 
     const tags = JSON.parse(data.value);
-    return NextResponse.json(tags);
+    return NextResponse.json(tags, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
       responseData = data;
     }
 
-    return NextResponse.json(JSON.parse(responseData.value));
+    return NextResponse.json(JSON.parse(responseData.value), { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

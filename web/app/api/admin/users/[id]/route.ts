@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: {
     id: string;
@@ -8,7 +10,7 @@ interface RouteParams {
 }
 
 // PUT /api/admin/users/[id]
-// Allows updating group, pagou and is_admin
+// Allows updating nome, email, group, pagou and is_admin
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = params;
@@ -39,7 +41,34 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
       throw error;
     }
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// DELETE /api/admin/users/[id]
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = params;
+
+    // 1. Delete user bets first to avoid FK constraint
+    await supabase.from('bets').delete().eq('usuario_id', id);
+
+    // 2. Delete the user record
+    const { data, error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: 'Usuário excluído com sucesso' }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

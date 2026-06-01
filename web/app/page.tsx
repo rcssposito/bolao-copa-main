@@ -380,12 +380,21 @@ export default function Home() {
     loadInitialData();
   }, [selectedCompetition]);
 
+  const loadPot = async (group?: string) => {
+    try {
+      const potRes = await getPotTotal(group && group !== 'GERAL' ? group : undefined);
+      setTotalPot(potRes.data);
+    } catch (error) {
+      console.error('Erro ao carregar pote:', error);
+    }
+  };
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
       const [rankingRes, potRes, matchesRes] = await Promise.all([
         getRanking(selectedCompetition),
-        getPotTotal(),
+        getPotTotal(rankingFilter !== 'GERAL' ? rankingFilter : undefined),
         getAvailableMatches(selectedCompetition)
       ]);
 
@@ -678,6 +687,8 @@ export default function Home() {
 
   const handleFilterChange = async (newFilter: string) => {
     setRankingFilter(newFilter);
+    // Reload pot for this group
+    loadPot(newFilter);
     if (newFilter === 'GERAL') {
       return;
     }
@@ -758,14 +769,17 @@ export default function Home() {
                   <Finance size={24} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white mb-0.5">💰 Valor do Pote Acumulado</h2>
-                  <p className="text-xs text-blue-400 font-medium">{totalPot.usuarios_pagantes} participantes ativos pagantes.</p>
+                  <h2 className="text-lg font-bold text-white mb-0.5">💰 Pote Total Acumulado</h2>
+                  <p className="text-xs text-blue-400 font-medium">
+                    {totalPot.usuarios_pagantes} participantes pagantes · R$ {(totalPot.valor_por_usuario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} por entrada
+                  </p>
                 </div>
               </div>
               <div className="text-3xl font-black text-emerald-400 bg-emerald-950/20 px-6 py-3 border border-emerald-500/20 rounded-lg">
                 R$ {totalPot.total_pote.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Matches Preview */}
@@ -1017,16 +1031,24 @@ export default function Home() {
               {/* Pote Total Card */}
               <div className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-emerald-400 font-bold mb-1">💰 Pote Total</div>
+                  <div className="text-xs uppercase tracking-wider text-emerald-400 font-bold mb-1">
+                    💰 {rankingFilter === 'GERAL' ? 'Pote Total Geral' : `Pote · ${rankingFilter}`}
+                  </div>
                   <div className="text-3xl font-extrabold text-white mt-1">
                     R$ {totalPot.total_pote.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-4 flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  {totalPot.usuarios_pagantes} pagantes {loggedUser.pagou ? '(Você pagou ✓)' : '(Você não pagou ✗)'}
+                <div className="mt-4 space-y-1">
+                  <div className="text-xs text-gray-400 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    {totalPot.usuarios_pagantes} pagantes · R$ {(totalPot.valor_por_usuario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/entrada
+                  </div>
+                  <div className={`text-xs font-semibold ${loggedUser.pagou ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {loggedUser.pagou ? '✓ Você pagou' : '✗ Seu pagamento está pendente'}
+                  </div>
                 </div>
               </div>
+
 
               {/* Jogos Disponíveis Card */}
               <div className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
@@ -1139,13 +1161,16 @@ export default function Home() {
                     {matches.map((match) => {
                       const pred = predictions[match.id] || { palpite_casa: '', palpite_fora: '', resultado_radio: '', saved: false };
                       const matchDate = new Date(match.data);
+                      const matchStarted = match.status === 'LIVE' || match.status === 'FINISHED' || new Date() >= matchDate;
+                      const isInputLocked = isGroupRequiredLocked || matchStarted;
                       
                       return (
-                        <div key={match.id} className="glass-card rounded-lg p-5 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div key={match.id} className={`glass-card rounded-lg p-5 flex flex-col md:flex-row justify-between items-center gap-6 transition-all ${matchStarted ? 'opacity-70' : ''}`}>
                           {/* Match Info & Teams */}
                           <div className="flex-1 w-full space-y-3">
                             <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                              <span className="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                              <span className={`h-1.5 w-1.5 rounded-full ${match.status === 'LIVE' ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`}></span>
+                              {match.status === 'LIVE' && <span className="text-red-400 font-bold">AO VIVO · </span>}
                               {matchDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' })} • {matchDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                             </div>
                             
@@ -1181,7 +1206,7 @@ export default function Home() {
                               min="0"
                               value={pred.palpite_casa}
                               onChange={(e) => handleScoreChange(match.id, 'home', e.target.value)}
-                              disabled={isGroupRequiredLocked}
+                              disabled={isInputLocked}
                               className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                               placeholder="0"
                             />
@@ -1191,87 +1216,84 @@ export default function Home() {
                               min="0"
                               value={pred.palpite_fora}
                               onChange={(e) => handleScoreChange(match.id, 'away', e.target.value)}
-                              disabled={isGroupRequiredLocked}
+                              disabled={isInputLocked}
                               className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                               placeholder="0"
                             />
                           </div>
 
-                          {/* Quick Radio Selection for Outcome */}
+                          {/* Outcome indicator — read-only, computed from scores */}
                           <div className="flex items-center gap-1 bg-gray-950/30 p-1 rounded-md border border-gray-900">
-                            <button
-                              type="button"
-                              onClick={() => handleOutcomeChange(match.id, 'CASA')}
-                              disabled={isGroupRequiredLocked}
-                              className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${
-                                pred.resultado_radio === 'CASA'
-                                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
-                              } disabled:opacity-30 disabled:cursor-not-allowed`}
-                            >
-                              Casa
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOutcomeChange(match.id, 'EMPATE')}
-                              disabled={isGroupRequiredLocked}
-                              className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${
-                                pred.resultado_radio === 'EMPATE'
-                                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
-                              } disabled:opacity-30 disabled:cursor-not-allowed`}
-                            >
-                              Empate
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOutcomeChange(match.id, 'FORA')}
-                              disabled={isGroupRequiredLocked}
-                              className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${
-                                pred.resultado_radio === 'FORA'
-                                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
-                              } disabled:opacity-30 disabled:cursor-not-allowed`}
-                            >
-                              Fora
-                            </button>
+                            {(['CASA', 'EMPATE', 'FORA'] as const).map((opt) => (
+                              <span
+                                key={opt}
+                                className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase select-none ${
+                                  pred.resultado_radio === opt
+                                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                                    : 'text-gray-600 border border-transparent'
+                                }`}
+                              >
+                                {opt === 'CASA' ? 'Casa' : opt === 'EMPATE' ? 'Empate' : 'Fora'}
+                              </span>
+                            ))}
                           </div>
+
 
                           {/* Submit Bet */}
                           <div className="flex flex-col items-end gap-1 shrink-0 w-full md:w-auto">
-                            <button
-                              onClick={() => submitPrediction(match.id)}
-                              disabled={savingBetId === match.id || isGroupRequiredLocked}
-                              className={`w-full md:w-auto px-4 py-2 font-bold text-xs rounded border-0 text-white cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                                pred.saved 
-                                  ? 'bg-emerald-600 hover:bg-emerald-700' 
-                                  : 'bg-blue-600 hover:bg-blue-700'
-                              }`}
-                            >
-                              {savingBetId === match.id 
-                                ? 'Salvando...' 
-                                : pred.saved 
-                                  ? '✓ Salvo' 
-                                  : 'Salvar'}
-                            </button>
-                            
-                            <span className="text-[9px] font-bold text-gray-500 flex items-center gap-1 mt-1 pr-1">
-                              {pred.saved ? (
-                                <>
-                                  <CheckmarkFilled size={12} className="text-emerald-400" />
-                                  Palpite gravado
-                                </>
-                              ) : (
-                                <>
-                                  <WarningFilled size={12} className="text-orange-400" />
-                                  Alterações pendentes
-                                </>
-                              )}
-                            </span>
+                            {matchStarted ? (
+                              /* Locked state */
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="px-3 py-2 text-xs font-bold rounded bg-gray-800/60 text-gray-500 border border-gray-700/50 cursor-not-allowed w-full md:w-auto text-center">
+                                  🔒 Encerrado
+                                </span>
+                                <span className="text-[9px] font-bold flex items-center gap-1 mt-1 pr-1">
+                                  {pred.saved ? (
+                                    <><CheckmarkFilled size={12} className="text-emerald-400" /><span className="text-emerald-400">Palpite registrado</span></>
+                                  ) : (
+                                    <><WarningFilled size={12} className="text-gray-500" /><span className="text-gray-500">Sem palpite</span></>
+                                  )}
+                                </span>
+                              </div>
+                            ) : (
+                              /* Normal editable state */
+                              <>
+                                <button
+                                  onClick={() => submitPrediction(match.id)}
+                                  disabled={savingBetId === match.id || isGroupRequiredLocked}
+                                  className={`w-full md:w-auto px-4 py-2 font-bold text-xs rounded border-0 text-white cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    pred.saved 
+                                      ? 'bg-emerald-600 hover:bg-emerald-700' 
+                                      : 'bg-blue-600 hover:bg-blue-700'
+                                  }`}
+                                >
+                                  {savingBetId === match.id 
+                                    ? 'Salvando...' 
+                                    : pred.saved 
+                                      ? '✓ Salvo' 
+                                      : 'Salvar'}
+                                </button>
+                                
+                                <span className="text-[9px] font-bold text-gray-500 flex items-center gap-1 mt-1 pr-1">
+                                  {pred.saved ? (
+                                    <>
+                                      <CheckmarkFilled size={12} className="text-emerald-400" />
+                                      Palpite gravado
+                                    </>
+                                  ) : (
+                                    <>
+                                      <WarningFilled size={12} className="text-orange-400" />
+                                      Alterações pendentes
+                                    </>
+                                  )}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
                     })}
+
                   </div>
                 )}
               </div>
