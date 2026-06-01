@@ -12,42 +12,37 @@
 }
 
 body {
-  background-color: #080808;
+  background-color: #0c0c0c; /* Carbon g100 flat body background */
   color: #f4f4f4;
   font-family: 'IBMPlexSans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(15, 98, 254, 0.12) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(138, 63, 252, 0.1) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(0, 67, 206, 0.12) 0px, transparent 50%),
-    radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 0);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 32px 32px;
-  background-attachment: fixed;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 0);
+  background-size: 24px 24px;
 }
 
 /* Glassmorphism Panels */
 .glass-panel {
-  background: rgba(15, 15, 15, 0.45);
+  background: rgba(22, 22, 22, 0.7); /* Carbon #161616 with glass opacity */
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
 }
 
 .glass-card {
-  background: rgba(22, 22, 22, 0.4);
+  background: rgba(38, 38, 38, 0.55); /* Carbon #262626 with glass opacity */
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3);
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card:hover {
   border-color: rgba(15, 98, 254, 0.3); /* IBM Blue glow */
-  background: rgba(30, 30, 30, 0.55);
+  background: rgba(45, 45, 45, 0.7);
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px 0 rgba(15, 98, 254, 0.15);
+  box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 /* Glass Modal Overlay */
@@ -55,23 +50,6 @@ body {
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-}
-
-/* IBM Signature Colored Tops */
-.ibm-border-blue {
-  border-top: 3px solid var(--ibm-blue-60);
-}
-
-.ibm-border-orange {
-  border-top: 3px solid #ff7849;
-}
-
-.ibm-border-purple {
-  border-top: 3px solid #8a3ffc;
-}
-
-.ibm-border-emerald {
-  border-top: 3px solid #24a148;
 }
 
 /* Customize scrollbars for premium look */
@@ -95,7 +73,7 @@ body {
 
 /* Carbon component overrides to match style */
 .cds--header {
-  background-color: rgba(12, 12, 12, 0.4) !important;
+  background-color: rgba(22, 22, 22, 0.8) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;

@@ -596,7 +596,7 @@ export default function Home() {
         <main className="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased">
           {/* Carbon Header */}
           <Header aria-label="Bolão Copa 2026">
-            <HeaderName href="#" prefix="IBM">
+            <HeaderName href="#" prefix="">
               Bolão Copa 2026
             </HeaderName>
           </Header>
@@ -728,7 +728,7 @@ export default function Home() {
       <main className="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased flex flex-col">
         {/* Carbon Header */}
         <Header aria-label="Bolão Copa 2026" className="border-b border-gray-900 bg-gray-950/85 backdrop-blur-md">
-          <HeaderName href="#" prefix="IBM">
+          <HeaderName href="#" prefix="">
             Bolão Copa 2026
           </HeaderName>
           
@@ -845,7 +845,7 @@ export default function Home() {
           </aside>
 
           {/* Main Dashboard Area */}
-          <div className="flex-1 overflow-y-auto px-6 py-8 w-full max-w-5xl mx-auto md:mx-0">
+          <div className="flex-1 overflow-y-auto px-8 py-8 w-full max-w-[1600px] mx-auto">
             {/* Header info in right area with event tabs and real hyperlink link */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-gray-900 pb-4">
               <div>
@@ -916,7 +916,7 @@ export default function Home() {
             {/* Status Dashboard Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               {/* Pote Total Card */}
-              <Tile className="glass-card ibm-border-emerald rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <Tile className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-emerald-400 font-bold mb-1">💰 Pote Total</div>
                   <div className="text-3xl font-extrabold text-white mt-1">
@@ -930,7 +930,7 @@ export default function Home() {
               </Tile>
 
               {/* Jogos Disponíveis Card */}
-              <Tile className="glass-card ibm-border-blue rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <Tile className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-indigo-400 font-bold mb-1">⚽ Jogos Disponíveis</div>
                   <div className="text-3xl font-extrabold text-white mt-1">
@@ -943,7 +943,7 @@ export default function Home() {
               </Tile>
 
               {/* Sua Posição Card */}
-              <Tile className="glass-card ibm-border-purple rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <Tile className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-purple-400 font-bold mb-1">🏅 Sua Pontuação</div>
                   <div className="text-3xl font-extrabold text-white mt-1">
@@ -958,7 +958,7 @@ export default function Home() {
               </Tile>
 
               {/* Grupo / Tag Card */}
-              <Tile id="seus-grupos-card" className="glass-card ibm-border-orange rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <Tile id="seus-grupos-card" className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-orange-400 font-bold mb-1">👥 Seus Grupos ({userGroups.length})</div>
                   

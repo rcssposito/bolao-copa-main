@@ -357,7 +357,7 @@ export default function AdminPage() {
       <main className="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased">
         {/* Carbon Header */}
         <Header aria-label="Painel Admin">
-          <HeaderName href="#" prefix="IBM">
+          <HeaderName href="#" prefix="">
             Administração
           </HeaderName>
           <div className="absolute right-4 top-0 h-full flex items-center">
@@ -377,7 +377,7 @@ export default function AdminPage() {
         {/* Dashboard Spacing */}
         <div className="pt-16"></div>
 
-        <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="container mx-auto px-4 py-8 max-w-[1600px]">
           {/* Header Description */}
           <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -401,7 +401,7 @@ export default function AdminPage() {
           </div>
 
           {/* Active Competition Settings */}
-          <Tile className="glass-card ibm-border-blue p-6 mb-8 rounded-lg">
+          <Tile className="glass-card p-6 mb-8 rounded-lg">
             <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
               🏆 Competição Ativa do Bolão
             </h2>
@@ -443,7 +443,7 @@ export default function AdminPage() {
           </Tile>
 
           {/* Add User Form using Carbon Tile */}
-          <Tile className="glass-card ibm-border-blue p-6 mb-8 rounded-lg">
+          <Tile className="glass-card p-6 mb-8 rounded-lg">
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <Add size={18} className="text-indigo-400" /> Adicionar Usuário Manualmente
             </h2>
@@ -497,7 +497,7 @@ export default function AdminPage() {
           </Tile>
 
           {/* Tag Management Form & List using Carbon Tile */}
-          <Tile className="glass-card ibm-border-orange p-6 mb-8 rounded-lg">
+          <Tile className="glass-card p-6 mb-8 rounded-lg">
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               👥 Gerenciar Grupos (Tags)
             </h2>
@@ -567,7 +567,7 @@ export default function AdminPage() {
           </Tile>
 
           {/* Users List using Carbon Table styled markup */}
-          <Tile className="glass-panel ibm-border-blue rounded-lg p-0 overflow-hidden shadow-xl">
+          <Tile className="glass-panel rounded-lg p-0 overflow-hidden shadow-xl">
             <div className="px-6 py-4 bg-slate-900/80 border-b border-gray-800 flex justify-between items-center">
               <h2 className="text-lg font-bold text-white">
                 👥 Participantes Cadastrados ({users.length})
@@ -801,7 +801,7 @@ export default function AdminPage() {
         {/* Custom Confirmation Modal for Active Competition */}
         {isConfirmCompModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-300">
-            <div className="w-full max-w-md bg-slate-900 border border-red-500/20 rounded-lg shadow-2xl p-6 overflow-hidden glass-panel ibm-border-blue">
+            <div className="w-full max-w-md bg-slate-900 border border-red-500/20 rounded-lg shadow-2xl p-6 overflow-hidden glass-panel">
               <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-3">
                 <h3 className="text-lg font-bold text-red-500 flex items-center gap-2">
                   <WarningFilled size={20} className="text-red-500" />

@@ -78,13 +78,10 @@ export async function POST(request: NextRequest) {
     // 2. Do not clear matches table so that we preserve matches and bets for all competitions.
     // The sync will simply insert/update matches of the new competition.
 
-    // 3. Trigger full sync for the new competition matches
-    const syncResult = await fullSync(apiKey);
-
+    // 3. Do not trigger full sync here. Sync should only run when the user clicks the button.
     return NextResponse.json({
       success: true,
-      message: `Competição ativa alterada para ${code}. Partidas limpas e sincronizadas com sucesso.`,
-      syncResult
+      message: `Competição ativa alterada para ${code} com sucesso. Por favor, clique em 'Sincronizar' para trazer os novos jogos.`
     });
 
   } catch (error: any) {
