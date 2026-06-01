@@ -1,40 +1,72 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { calculateScoreDifference } from '@/lib/scoring';
 
 // GET /api/ranking
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // 1. Get all users
+    const { searchParams } = new URL(request.url);
+    let comp = searchParams.get('competition');
+
+    if (!comp) {
+      const { data: configData } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', 'active_competition')
+        .maybeSingle();
+      comp = configData?.value || 'WC';
+    }
+
+    // 1. Get all matches for this competition
+    const { data: matches, error: matchesError } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('competition', comp);
+
+    if (matchesError) throw matchesError;
+
+    const matchIds = matches ? matches.map(m => m.id) : [];
+    const lastMatch = matches ? matches.find(m => m.is_last_match) : null;
+
+    // 2. Get all users
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select('*');
 
     if (usersError) throw usersError;
 
-    // 2. Get last match (used for tiebreaker)
-    const { data: lastMatchData } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('is_last_match', true)
-      .maybeSingle();
+    // 3. Get all bets for these matches
+    let bets: any[] = [];
+    if (matchIds.length > 0) {
+      const { data: betsData, error: betsError } = await supabase
+        .from('bets')
+        .select('*')
+        .in('jogo_id', matchIds);
+      if (betsError) throw betsError;
+      bets = betsData || [];
+    }
 
-    const lastMatch = lastMatchData || null;
-
-    // 3. Map users and compute tiebreaker value
+    // 4. Map users and compute points and tiebreaker for this competition
     const rankingUsers = users.map(user => {
-      let diferenca_ultimo_jogo: number | null = null;
+      // Filter bets for this user
+      const userBets = bets.filter(b => b.usuario_id === user.id);
+      const pontos_total = userBets.reduce((sum, b) => sum + (b.pontos || 0), 0);
 
+      // Find bet for the last match of this competition
+      const lastMatchBet = lastMatch ? userBets.find(b => b.jogo_id === lastMatch.id) : null;
+
+      let diferenca_ultimo_jogo: number | null = null;
       if (
         lastMatch &&
         lastMatch.placar_casa !== null &&
         lastMatch.placar_fora !== null &&
-        user.ultimo_palpite_casa !== null &&
-        user.ultimo_palpite_fora !== null
+        lastMatchBet &&
+        lastMatchBet.palpite_casa !== null &&
+        lastMatchBet.palpite_fora !== null
       ) {
         diferenca_ultimo_jogo = calculateScoreDifference(
-          user.ultimo_palpite_casa,
-          user.ultimo_palpite_fora,
+          lastMatchBet.palpite_casa,
+          lastMatchBet.palpite_fora,
           lastMatch.placar_casa,
           lastMatch.placar_fora
         );
@@ -44,9 +76,9 @@ export async function GET() {
         id: user.id,
         nome: user.nome,
         email: user.email,
-        pontos_total: user.pontos_total || 0,
-        ultimo_palpite_casa: user.ultimo_palpite_casa,
-        ultimo_palpite_fora: user.ultimo_palpite_fora,
+        pontos_total,
+        ultimo_palpite_casa: lastMatchBet ? lastMatchBet.palpite_casa : null,
+        ultimo_palpite_fora: lastMatchBet ? lastMatchBet.palpite_fora : null,
         grupo: user.grupo,
         pagou: user.pagou || false,
         is_admin: user.is_admin || false,
@@ -55,10 +87,7 @@ export async function GET() {
       };
     });
 
-    // 4. Sort:
-    // a. More points first (descending)
-    // b. Lower difference first (ascending)
-    // c. Users without a difference (null) go to the end
+    // 5. Sort
     rankingUsers.sort((a, b) => {
       if (b.pontos_total !== a.pontos_total) {
         return b.pontos_total - a.pontos_total;
@@ -69,7 +98,7 @@ export async function GET() {
       return aDiff - bDiff;
     });
 
-    // 5. Assign position rank
+    // 6. Assign position rank
     rankingUsers.forEach((user, index) => {
       user.posicao = index + 1;
     });

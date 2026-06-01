@@ -75,13 +75,8 @@ export async function POST(request: NextRequest) {
 
     if (configError) throw configError;
 
-    // 2. Clear matches table (ON DELETE CASCADE will automatically wipe bets)
-    const { error: deleteError } = await supabase
-      .from('matches')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
-
-    if (deleteError) throw deleteError;
+    // 2. Do not clear matches table so that we preserve matches and bets for all competitions.
+    // The sync will simply insert/update matches of the new competition.
 
     // 3. Trigger full sync for the new competition matches
     const syncResult = await fullSync(apiKey);

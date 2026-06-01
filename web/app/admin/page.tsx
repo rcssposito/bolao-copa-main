@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 import { 
   getAllUsers, 
   createUser as apiCreateUser, 
@@ -28,7 +29,8 @@ import {
   Header,
   HeaderName,
   Theme,
-  Toggle
+  Toggle,
+  Modal
 } from '@carbon/react';
 
 import { 
@@ -38,7 +40,8 @@ import {
    Edit, 
    Checkmark, 
    Close,
-   Renew
+   Renew,
+   WarningFilled
  } from '@carbon/icons-react';
 
 export default function AdminPage() {
@@ -70,6 +73,11 @@ export default function AdminPage() {
   const [activeCompCode, setActiveCompCode] = useState<string>('WC');
   const [loadingComps, setLoadingComps] = useState<boolean>(false);
   const [changingComp, setChangingComp] = useState<boolean>(false);
+
+  // Custom confirmation modal states for active competition
+  const [isConfirmCompModalOpen, setIsConfirmCompModalOpen] = useState(false);
+  const [compConfirmText, setCompConfirmText] = useState('');
+  const [compToSync, setCompToSync] = useState('');
 
   // Edit User Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -150,13 +158,19 @@ export default function AdminPage() {
     }
   };
 
+  const openConfirmCompModal = (code: string) => {
+    setCompToSync(code);
+    setCompConfirmText('');
+    setIsConfirmCompModalOpen(true);
+  };
+
   const handleSaveCompetition = async (code: string) => {
-    if (!confirm(`Tem certeza que deseja mudar a competição ativa para ${code}? Isso apagará as partidas e apostas da competição anterior!`)) return;
+    setIsConfirmCompModalOpen(false);
     try {
       setChangingComp(true);
       const res = await updateActiveCompetition(code);
       setActiveCompCode(code);
-      alert(res.data.message || 'Competição ativa atualizada com sucesso!');
+      alert(res.data.message || 'Competição ativa atualizada e sincronizada com sucesso!');
       await loadUsers();
     } catch (error: any) {
       console.error('Erro ao salvar competição ativa:', error);
@@ -348,11 +362,12 @@ export default function AdminPage() {
           </HeaderName>
           <div className="absolute right-4 top-0 h-full flex items-center">
             <Button
+              as={Link}
+              href="/"
               kind="ghost"
               size="sm"
               renderIcon={ArrowLeft}
-              onClick={() => window.location.href = '/'}
-              className="text-xs font-semibold px-3 py-1.5 h-8 text-gray-400 hover:text-white"
+              className="text-xs font-semibold px-3 py-1.5 h-8 text-gray-400 hover:text-white flex items-center"
             >
               Voltar ao Bolão
             </Button>
@@ -391,7 +406,7 @@ export default function AdminPage() {
               🏆 Competição Ativa do Bolão
             </h2>
             <p className="text-xs text-gray-400 mb-4 font-medium">
-              Escolha qual competição da API de Futebol carregar. Ao mudar, todas as partidas e apostas antigas serão excluídas.
+              Escolha qual competição da API de Futebol carregar e manter ativa. Novas partidas serão importadas sem apagar os dados dos outros campeonatos.
             </p>
             
             {loadingComps ? (
@@ -417,9 +432,9 @@ export default function AdminPage() {
                 </div>
                 <Button
                   kind="danger"
-                  onClick={() => handleSaveCompetition(activeCompCode)}
+                  onClick={() => openConfirmCompModal(activeCompCode)}
                   disabled={changingComp || !activeCompCode}
-                  className="h-10 px-6 font-bold flex items-center justify-center"
+                  className="h-10 px-6 font-bold flex items-center justify-center cds--btn--danger"
                 >
                   {changingComp ? 'Atualizando...' : 'Definir e Sincronizar'}
                 </Button>
@@ -780,6 +795,68 @@ export default function AdminPage() {
                   </Button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {/* Custom Confirmation Modal for Active Competition */}
+        {isConfirmCompModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-300">
+            <div className="w-full max-w-md bg-slate-900 border border-red-500/20 rounded-lg shadow-2xl p-6 overflow-hidden glass-panel ibm-border-blue">
+              <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-3">
+                <h3 className="text-lg font-bold text-red-500 flex items-center gap-2">
+                  <WarningFilled size={20} className="text-red-500" />
+                  Confirmar Sincronização
+                </h3>
+                <button 
+                  type="button"
+                  onClick={() => setIsConfirmCompModalOpen(false)}
+                  className="text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer p-1"
+                >
+                  <Close size={20} />
+                </button>
+              </div>
+              
+              <div className="space-y-4 text-sm text-gray-300">
+                <p>
+                  Você está prestes a ativar e sincronizar a competição <span className="font-bold text-white">{compToSync}</span>.
+                </p>
+                <div className="bg-red-950/15 border border-red-500/10 p-3.5 rounded text-xs text-red-400 font-medium">
+                  <strong>Atenção:</strong> Esta operação fará requisições adicionais à API e importará novas partidas. Certifique-se de que a chave da API está correta.
+                </div>
+                <p className="text-xs">
+                  Para confirmar, digite <span className="font-bold text-white font-mono">CONFIRMAR</span> abaixo:
+                </p>
+                
+                <TextInput
+                  id="confirm-comp-input"
+                  labelText=""
+                  hideLabel
+                  placeholder="Digite CONFIRMAR"
+                  value={compConfirmText}
+                  onChange={(e) => setCompConfirmText(e.target.value)}
+                  className="w-full font-bold uppercase tracking-wider"
+                />
+
+                <div className="flex gap-3 pt-4 border-t border-gray-800">
+                  <Button
+                    type="button"
+                    kind="secondary"
+                    onClick={() => setIsConfirmCompModalOpen(false)}
+                    className="flex-1 font-bold"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    kind="danger"
+                    disabled={compConfirmText !== 'CONFIRMAR'}
+                    onClick={() => handleSaveCompetition(compToSync)}
+                    className="flex-1 font-bold bg-red-600 hover:bg-red-700 border-red-600 cds--btn--danger"
+                  >
+                    Confirmar
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}

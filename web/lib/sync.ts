@@ -66,13 +66,20 @@ export function mapStatus(apiStatus: string): 'SCHEDULED' | 'FINISHED' | 'LIVE' 
  * Sincroniza as partidas da API com a tabela `matches` do Supabase
  */
 export async function syncMatches(apiKey: string): Promise<number> {
+  const { data: configData } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'active_competition')
+    .maybeSingle();
+  
+  const compCode = configData?.value || 'WC';
   const apiMatches = await fetchMatchesFromApi(apiKey);
   let updatedCount = 0;
 
   for (const apiMatch of apiMatches) {
     const status = mapStatus(apiMatch.status);
-    const homeScore = apiMatch.score.fullTime.home;
-    const awayScore = apiMatch.score.fullTime.away;
+    const homeScore = apiMatch.score?.fullTime?.home ?? null;
+    const awayScore = apiMatch.score?.fullTime?.away ?? null;
 
     // Verifica se jogo já existe
     const { data: existing } = await supabase
@@ -83,12 +90,13 @@ export async function syncMatches(apiKey: string): Promise<number> {
 
     const matchData = {
       id_api: apiMatch.id,
-      time_casa: apiMatch.homeTeam.name || 'A confirmar',
-      time_fora: apiMatch.awayTeam.name || 'A confirmar',
+      time_casa: apiMatch.homeTeam?.name || 'A confirmar',
+      time_fora: apiMatch.awayTeam?.name || 'A confirmar',
       data: apiMatch.utcDate,
       placar_casa: homeScore,
       placar_fora: awayScore,
       status: status,
+      competition: compCode,
       updated_at: new Date().toISOString()
     };
 

@@ -70,8 +70,10 @@ export const deleteUser = (id: string) => api.delete<{ message: string }>(`/user
 export const loginUser = (data: { email: string; nome: string; code?: string }) => api.post<User>('/users/login', data)
 
 // Matches
-export const getAvailableMatches = () => api.get<Match[]>('/matches')
-export const getUpcomingMatches = () => api.get<Match[]>('/matches/upcoming')
+export const getAvailableMatches = (competition?: string) => 
+  api.get<Match[]>('/matches', { params: competition ? { competition } : {} })
+export const getUpcomingMatches = (competition?: string) => 
+  api.get<Match[]>('/matches/upcoming', { params: competition ? { competition } : {} })
 export const getFinishedMatches = () => api.get<Match[]>('/matches/finished')
 export const getMatch = (id: string) => api.get<Match>(`/matches/${id}`)
 
@@ -88,9 +90,10 @@ export const getUserBets = (userId: string) => api.get<Bet[]>(`/bets/user/${user
 export const getMatchBets = (matchId: string) => api.get<Bet[]>(`/bets/match/${matchId}`)
 
 // Ranking
-export const getRanking = () => api.get<{ ranking: RankingUser[]; total_usuarios: number }>('/ranking')
-export const getGroupRanking = (group: string) => 
-  api.get<{ ranking: RankingUser[]; total_usuarios: number }>(`/ranking/group/${group}`)
+export const getRanking = (competition?: string) => 
+  api.get<{ ranking: RankingUser[]; total_usuarios: number }>('/ranking', { params: competition ? { competition } : {} })
+export const getGroupRanking = (group: string, competition?: string) => 
+  api.get<{ ranking: RankingUser[]; total_usuarios: number }>(`/ranking/group/${group}`, { params: competition ? { competition } : {} })
 
 // Admin
 export const getAllUsers = () => api.get<User[]>('/admin/users')

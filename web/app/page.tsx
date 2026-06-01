@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 import { 
   getRanking, 
   getPotTotal, 
@@ -38,7 +39,11 @@ import {
   WarningFilled,
   Trophy,
   Finance,
-  Events
+  Events,
+  Home as HomeIcon,
+  Document,
+  UserMultiple,
+  Group
 } from '@carbon/icons-react';
 
 export default function Home() {
@@ -53,6 +58,9 @@ export default function Home() {
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [savingBetId, setSavingBetId] = useState<string | null>(null);
   
+  // Selected competition state on dashboard
+  const [selectedCompetition, setSelectedCompetition] = useState<string>('WC');
+
   // Local prediction state for each match
   // Key: matchId, Value: { palpite_casa, palpite_fora, resultado_radio, saved }
   const [predictions, setPredictions] = useState<Record<string, {
@@ -100,16 +108,16 @@ export default function Home() {
             setRegistrationPendingUser(null);
             
             // Load their predictions
-            await loadUserBets(res.data.id);
+            await loadUserBets(res.data.id, matches);
 
-            // Load group ranking if they are in a group (Default to first group of multi-group list)
+            // Load group ranking if they are in a group
             if (res.data.grupo) {
               try {
                 const uGroups = res.data.grupo.split(',').map((g: string) => g.trim()).filter(Boolean);
                 const firstGroup = uGroups[0];
                 if (firstGroup) {
                   setRankingFilter(firstGroup);
-                  const groupRankRes = await getGroupRanking(firstGroup);
+                  const groupRankRes = await getGroupRanking(firstGroup, selectedCompetition);
                   setGroupRanking(groupRankRes.data.ranking);
                 } else {
                   setGroupRanking([]);
@@ -139,20 +147,20 @@ export default function Home() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [matches]);
+  }, [matches, selectedCompetition]);
 
-  // 2. Fetch general app data
+  // 2. Fetch general app data when selected competition changes
   useEffect(() => {
     loadInitialData();
-  }, []);
+  }, [selectedCompetition]);
 
   const loadInitialData = async () => {
     try {
       setLoading(true);
       const [rankingRes, potRes, matchesRes] = await Promise.all([
-        getRanking(),
+        getRanking(selectedCompetition),
         getPotTotal(),
-        getAvailableMatches()
+        getAvailableMatches(selectedCompetition)
       ]);
 
       setRanking(rankingRes.data.ranking);
@@ -171,6 +179,18 @@ export default function Home() {
       });
       setPredictions(initialPredictions);
 
+      // Reload user bets if logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && loggedUser) {
+        await loadUserBets(loggedUser.id, matchesRes.data);
+      }
+
+      // Reload group ranking if not general
+      if (rankingFilter !== 'GERAL') {
+        const groupRankRes = await getGroupRanking(rankingFilter, selectedCompetition);
+        setGroupRanking(groupRankRes.data.ranking);
+      }
+
     } catch (error) {
       console.error('Erro ao carregar dados do bolão:', error);
     } finally {
@@ -178,7 +198,7 @@ export default function Home() {
     }
   };
 
-  const loadUserBets = async (userId: string) => {
+  const loadUserBets = async (userId: string, currentMatches: Match[] = matches) => {
     try {
       const response = await getUserBets(userId);
       const userBets = response.data;
@@ -186,7 +206,7 @@ export default function Home() {
       setPredictions(prev => {
         const updated = { ...prev };
         
-        matches.forEach(match => {
+        currentMatches.forEach(match => {
           const matchingBet = userBets.find((b: Bet) => b.jogo_id === match.id);
           if (matchingBet) {
             updated[match.id] = {
@@ -340,12 +360,12 @@ export default function Home() {
       }));
 
       // Refresh ranking list
-      const rankingRes = await getRanking();
+      const rankingRes = await getRanking(selectedCompetition);
       setRanking(rankingRes.data.ranking);
 
       if (rankingFilter !== 'GERAL') {
         try {
-          const groupRankRes = await getGroupRanking(rankingFilter);
+          const groupRankRes = await getGroupRanking(rankingFilter, selectedCompetition);
           setGroupRanking(groupRankRes.data.ranking);
         } catch (err) {
           console.error('Erro ao recarregar ranking do grupo:', err);
@@ -379,7 +399,7 @@ export default function Home() {
       const joinedGroup = newGroups[newGroups.length - 1];
       if (joinedGroup) {
         setRankingFilter(joinedGroup);
-        const groupRankRes = await getGroupRanking(joinedGroup);
+        const groupRankRes = await getGroupRanking(joinedGroup, selectedCompetition);
         setGroupRanking(groupRankRes.data.ranking);
         alert(`Você entrou no grupo "${joinedGroup}" com sucesso!`);
       } else {
@@ -408,7 +428,7 @@ export default function Home() {
       if (newGroups.length > 0) {
         const nextGroup = newGroups[0];
         setRankingFilter(nextGroup);
-        const groupRankRes = await getGroupRanking(nextGroup);
+        const groupRankRes = await getGroupRanking(nextGroup, selectedCompetition);
         setGroupRanking(groupRankRes.data.ranking);
       } else {
         setRankingFilter('GERAL');
@@ -429,7 +449,7 @@ export default function Home() {
       return;
     }
     try {
-      const groupRankRes = await getGroupRanking(newFilter);
+      const groupRankRes = await getGroupRanking(newFilter, selectedCompetition);
       setGroupRanking(groupRankRes.data.ranking);
     } catch (err) {
       console.error('Erro ao buscar ranking do grupo:', err);
@@ -454,7 +474,7 @@ export default function Home() {
         alert('Cadastro realizado com sucesso! Bem-vindo ao bolão.');
         
         // Load predictions
-        await loadUserBets(res.data.id);
+        await loadUserBets(res.data.id, matches);
         
         // Load group rankings
         if (res.data.grupo) {
@@ -462,7 +482,7 @@ export default function Home() {
           const firstGroup = uGroups[0];
           if (firstGroup) {
             setRankingFilter(firstGroup);
-            const groupRankRes = await getGroupRanking(firstGroup);
+            const groupRankRes = await getGroupRanking(firstGroup, selectedCompetition);
             setGroupRanking(groupRankRes.data.ranking);
           }
         }
@@ -733,53 +753,83 @@ export default function Home() {
         {/* Flex layout for sidebar and content */}
         <div className="flex pt-12 min-h-screen">
           
-          {/* Left Sidebar (Standard IBM Style) */}
-          <aside className="hidden md:flex flex-col w-64 bg-gray-950/60 border-r border-gray-900 shrink-0 p-4 justify-between sticky top-12 h-[calc(100vh-3rem)]">
+          {/* Left Sidebar (Standard IBM Style with Glassmorphism) */}
+          <aside className="hidden md:flex flex-col w-64 glass-panel border-r border-white/5 shrink-0 p-4 justify-between sticky top-12 h-[calc(100vh-3rem)] z-20">
             <div className="space-y-6">
               {/* Menu items */}
               <nav className="space-y-1">
-                <button
-                  onClick={() => {
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-white bg-blue-600/10 border-l-4 border-blue-500 transition-all text-left"
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-white bg-blue-600/10 border-l-4 border-blue-500 transition-all text-left no-underline"
                 >
-                  <Trophy size={18} className="text-blue-500" />
+                  <HomeIcon size={18} className="text-blue-500" />
                   Dashboard
-                </button>
+                </a>
                 
-                <button
-                  onClick={() => {
+                <a
+                  href="#palpites-disponiveis"
+                  onClick={(e) => {
+                    e.preventDefault();
                     const el = document.getElementById('palpites-disponiveis');
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
-                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left"
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left no-underline"
                 >
-                  <Events size={18} />
+                  <Document size={18} />
                   Palpites
-                </button>
+                </a>
 
-                <button
-                  onClick={() => {
+                <a
+                  href="#classificacao-geral"
+                  onClick={(e) => {
+                    e.preventDefault();
                     const el = document.getElementById('classificacao-geral');
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
-                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left"
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left no-underline"
                 >
                   <Trophy size={18} />
                   Classificação
-                </button>
+                </a>
+
+                <a
+                  href="#classificacao-geral"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById('classificacao-geral');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left no-underline"
+                >
+                  <UserMultiple size={18} />
+                  Participantes
+                </a>
+
+                <a
+                  href="#seus-grupos-card"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById('seus-grupos-card');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left no-underline"
+                >
+                  <Group size={18} />
+                  Grupos
+                </a>
 
                 {loggedUser.is_admin && (
-                  <button
-                    onClick={() => {
-                      window.location.href = '/admin';
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left"
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left no-underline"
                   >
                     <Settings size={18} />
                     Configurações
-                  </button>
+                  </Link>
                 )}
               </nav>
             </div>
@@ -796,20 +846,59 @@ export default function Home() {
 
           {/* Main Dashboard Area */}
           <div className="flex-1 overflow-y-auto px-6 py-8 w-full max-w-5xl mx-auto md:mx-0">
-            {/* Header info in right area */}
-            <div className="flex justify-between items-center mb-8 border-b border-gray-900 pb-4">
+            {/* Header info in right area with event tabs and real hyperlink link */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-gray-900 pb-4">
               <div>
                 <h1 className="text-2xl font-black text-white tracking-tight leading-none">Dashboard</h1>
                 <p className="text-xs text-gray-500 mt-1.5 font-medium">Bem-vindo de volta ao Bolão da Copa.</p>
               </div>
+              
+              {/* Event Tabs Switcher */}
+              <div className="flex items-center gap-1.5 bg-gray-950/40 p-1 border border-white/5 rounded-lg backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCompetition('WC')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded transition-all cursor-pointer border-0 ${
+                    selectedCompetition === 'WC' 
+                      ? 'bg-blue-600 text-white shadow' 
+                      : 'text-gray-400 hover:text-gray-200 bg-transparent'
+                  }`}
+                >
+                  🌎 Copa do Mundo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCompetition('CL')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded transition-all cursor-pointer border-0 ${
+                    selectedCompetition === 'CL' 
+                      ? 'bg-blue-600 text-white shadow' 
+                      : 'text-gray-400 hover:text-gray-200 bg-transparent'
+                  }`}
+                >
+                  🏆 Champions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCompetition('BSA')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded transition-all cursor-pointer border-0 ${
+                    selectedCompetition === 'BSA' 
+                      ? 'bg-blue-600 text-white shadow' 
+                      : 'text-gray-400 hover:text-gray-200 bg-transparent'
+                  }`}
+                >
+                  ⚽ Brasileirão
+                </button>
+              </div>
+
               <div className="flex items-center gap-4">
                 {loggedUser.is_admin && (
                   <Button
+                    as={Link}
+                    href="/admin"
                     kind="ghost"
                     size="sm"
                     renderIcon={Settings}
-                    onClick={() => window.location.href = '/admin'}
-                    className="text-xs font-semibold px-3 py-1.5 h-8 text-amber-400 hover:text-amber-300 hover:bg-slate-900/40"
+                    className="text-xs font-semibold px-3 py-1.5 h-8 text-amber-400 hover:text-amber-300 hover:bg-slate-900/40 flex items-center"
                   >
                     Painel Admin
                   </Button>
@@ -869,7 +958,7 @@ export default function Home() {
               </Tile>
 
               {/* Grupo / Tag Card */}
-              <Tile className="glass-card ibm-border-orange rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <Tile id="seus-grupos-card" className="glass-card ibm-border-orange rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-orange-400 font-bold mb-1">👥 Seus Grupos ({userGroups.length})</div>
                   
@@ -1174,10 +1263,11 @@ export default function Home() {
           
           {loggedUser.is_admin && (
             <Button
+              as={Link}
+              href="/admin"
               kind="ghost"
               renderIcon={Settings}
               size="sm"
-              onClick={() => window.location.href = '/admin'}
               className="text-gray-400 hover:text-gray-200"
             >
               Acessar Painel Administrativo
