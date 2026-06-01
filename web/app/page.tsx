@@ -335,7 +335,7 @@ export default function Home() {
           setLoggedUser(res.data);
           
           // Load their predictions
-          await loadUserBets(res.data.id, matches);
+          await loadUserBets(res.data.id);
 
           // Load group ranking if they are in a group
           if (res.data.grupo) {
@@ -412,14 +412,41 @@ export default function Home() {
           saved: false
         };
       });
-      setPredictions(initialPredictions);
 
       // Reload user bets if logged in
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user && loggedUser) {
-        await loadUserBets(loggedUser.id, matchesRes.data);
+      if (session?.user) {
+        try {
+          let userId = loggedUser?.id;
+          if (!userId) {
+            const email = session.user.email!;
+            const nome = session.user.user_metadata.full_name || email.split('@')[0];
+            const res = await loginUser({ email, nome });
+            setLoggedUser(res.data);
+            userId = res.data.id;
+          }
+          
+          if (userId) {
+            const betsRes = await getUserBets(userId);
+            const userBets = betsRes.data;
+            
+            userBets.forEach((matchingBet: Bet) => {
+              initialPredictions[matchingBet.jogo_id] = {
+                palpite_casa: matchingBet.palpite_casa,
+                palpite_fora: matchingBet.palpite_fora,
+                resultado_radio: matchingBet.resultado_radio,
+                betId: matchingBet.id,
+                saved: true
+              };
+            });
+          }
+        } catch (err) {
+          console.error('Erro ao carregar usuário e palpites no loadInitialData:', err);
+        }
       }
 
+      setPredictions(initialPredictions);
+      
       // Reload group ranking if not general
       if (rankingFilter !== 'GERAL') {
         const groupRankRes = await getGroupRanking(rankingFilter, selectedCompetition);
@@ -433,7 +460,7 @@ export default function Home() {
     }
   };
 
-  const loadUserBets = async (userId: string, currentMatches: Match[] = matches) => {
+  const loadUserBets = async (userId: string) => {
     try {
       const response = await getUserBets(userId);
       const userBets = response.data;
@@ -441,24 +468,14 @@ export default function Home() {
       setPredictions(prev => {
         const updated = { ...prev };
         
-        currentMatches.forEach(match => {
-          const matchingBet = userBets.find((b: Bet) => b.jogo_id === match.id);
-          if (matchingBet) {
-            updated[match.id] = {
-              palpite_casa: matchingBet.palpite_casa,
-              palpite_fora: matchingBet.palpite_fora,
-              resultado_radio: matchingBet.resultado_radio,
-              betId: matchingBet.id,
-              saved: true
-            };
-          } else {
-            updated[match.id] = {
-              palpite_casa: '',
-              palpite_fora: '',
-              resultado_radio: '',
-              saved: false
-            };
-          }
+        userBets.forEach((matchingBet: Bet) => {
+          updated[matchingBet.jogo_id] = {
+            palpite_casa: matchingBet.palpite_casa,
+            palpite_fora: matchingBet.palpite_fora,
+            resultado_radio: matchingBet.resultado_radio,
+            betId: matchingBet.id,
+            saved: true
+          };
         });
         
         return updated;
@@ -1165,9 +1182,9 @@ export default function Home() {
                       const isInputLocked = isGroupRequiredLocked || matchStarted;
                       
                       return (
-                        <div key={match.id} className={`glass-card rounded-lg p-5 flex flex-col md:flex-row justify-between items-center gap-6 transition-all ${matchStarted ? 'opacity-70' : ''}`}>
-                          {/* Match Info & Teams */}
-                          <div className="flex-1 w-full space-y-3">
+                        <div key={match.id} className={`glass-card rounded-lg p-5 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-center transition-all ${matchStarted ? 'opacity-70' : ''}`}>
+                          {/* Match Info & Teams (5 cols) */}
+                          <div className="md:col-span-5 w-full space-y-3">
                             <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider flex items-center gap-1.5">
                               <span className={`h-1.5 w-1.5 rounded-full ${match.status === 'LIVE' ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`}></span>
                               {match.status === 'LIVE' && <span className="text-red-400 font-bold">AO VIVO · </span>}
@@ -1199,96 +1216,101 @@ export default function Home() {
                             </div>
                           </div>
 
-                          {/* Prediction Inputs */}
-                          <div className="flex items-center gap-3 bg-gray-950/60 p-2 rounded-lg border border-gray-800/80">
-                            <input
-                              type="number"
-                              min="0"
-                              value={pred.palpite_casa}
-                              onChange={(e) => handleScoreChange(match.id, 'home', e.target.value)}
-                              disabled={isInputLocked}
-                              className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-                              placeholder="0"
-                            />
-                            <span className="text-gray-600 font-bold">x</span>
-                            <input
-                              type="number"
-                              min="0"
-                              value={pred.palpite_fora}
-                              onChange={(e) => handleScoreChange(match.id, 'away', e.target.value)}
-                              disabled={isInputLocked}
-                              className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-                              placeholder="0"
-                            />
+                          {/* Prediction Inputs (2 cols) */}
+                          <div className="md:col-span-2 flex justify-center w-full">
+                            <div className="flex items-center gap-3 bg-gray-950/60 p-2 rounded-lg border border-gray-800/80 w-fit">
+                              <input
+                                type="number"
+                                min="0"
+                                value={pred.palpite_casa}
+                                onChange={(e) => handleScoreChange(match.id, 'home', e.target.value)}
+                                disabled={isInputLocked}
+                                className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                placeholder="0"
+                              />
+                              <span className="text-gray-600 font-bold">x</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={pred.palpite_fora}
+                                onChange={(e) => handleScoreChange(match.id, 'away', e.target.value)}
+                                disabled={isInputLocked}
+                                className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                placeholder="0"
+                              />
+                            </div>
                           </div>
 
-                          {/* Outcome indicator — read-only, computed from scores */}
-                          <div className="flex items-center gap-1 bg-gray-950/30 p-1 rounded-md border border-gray-900">
-                            {(['CASA', 'EMPATE', 'FORA'] as const).map((opt) => (
-                              <span
-                                key={opt}
-                                className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase select-none ${
-                                  pred.resultado_radio === opt
-                                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                                    : 'text-gray-600 border border-transparent'
-                                }`}
-                              >
-                                {opt === 'CASA' ? 'Casa' : opt === 'EMPATE' ? 'Empate' : 'Fora'}
-                              </span>
-                            ))}
-                          </div>
-
-
-                          {/* Submit Bet */}
-                          <div className="flex flex-col items-end gap-1 shrink-0 w-full md:w-auto">
-                            {matchStarted ? (
-                              /* Locked state */
-                              <div className="flex flex-col items-end gap-1">
-                                <span className="px-3 py-2 text-xs font-bold rounded bg-gray-800/60 text-gray-500 border border-gray-700/50 cursor-not-allowed w-full md:w-auto text-center">
-                                  🔒 Encerrado
-                                </span>
-                                <span className="text-[9px] font-bold flex items-center gap-1 mt-1 pr-1">
-                                  {pred.saved ? (
-                                    <><CheckmarkFilled size={12} className="text-emerald-400" /><span className="text-emerald-400">Palpite registrado</span></>
-                                  ) : (
-                                    <><WarningFilled size={12} className="text-gray-500" /><span className="text-gray-500">Sem palpite</span></>
-                                  )}
-                                </span>
-                              </div>
-                            ) : (
-                              /* Normal editable state */
-                              <>
-                                <button
-                                  onClick={() => submitPrediction(match.id)}
-                                  disabled={savingBetId === match.id || isGroupRequiredLocked}
-                                  className={`w-full md:w-auto px-4 py-2 font-bold text-xs rounded border-0 text-white cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                                    pred.saved 
-                                      ? 'bg-emerald-600 hover:bg-emerald-700' 
-                                      : 'bg-blue-600 hover:bg-blue-700'
+                          {/* Outcome indicator — read-only, computed from scores (3 cols) */}
+                          <div className="md:col-span-3 flex justify-center w-full">
+                            <div className="flex items-center gap-1 bg-gray-950/30 p-1 rounded-md border border-gray-900 w-fit">
+                              {(['CASA', 'EMPATE', 'FORA'] as const).map((opt) => (
+                                <span
+                                  key={opt}
+                                  className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase select-none ${
+                                    pred.resultado_radio === opt
+                                      ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                                      : 'text-gray-600 border border-transparent'
                                   }`}
                                 >
-                                  {savingBetId === match.id 
-                                    ? 'Salvando...' 
-                                    : pred.saved 
-                                      ? '✓ Salvo' 
-                                      : 'Salvar'}
-                                </button>
-                                
-                                <span className="text-[9px] font-bold text-gray-500 flex items-center gap-1 mt-1 pr-1">
-                                  {pred.saved ? (
-                                    <>
-                                      <CheckmarkFilled size={12} className="text-emerald-400" />
-                                      Palpite gravado
-                                    </>
-                                  ) : (
-                                    <>
-                                      <WarningFilled size={12} className="text-orange-400" />
-                                      Alterações pendentes
-                                    </>
-                                  )}
+                                  {opt === 'CASA' ? 'Casa' : opt === 'EMPATE' ? 'Empate' : 'Fora'}
                                 </span>
-                              </>
-                            )}
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Submit Bet (2 cols) */}
+                          <div className="md:col-span-2 flex justify-center md:justify-end w-full">
+                            <div className="flex flex-col items-center md:items-end gap-1 w-full md:w-auto">
+                              {matchStarted ? (
+                                /* Locked state */
+                                <div className="flex flex-col items-center md:items-end gap-1">
+                                  <span className="px-3 py-2 text-xs font-bold rounded bg-gray-800/60 text-gray-500 border border-gray-700/50 cursor-not-allowed w-full md:w-auto text-center">
+                                    🔒 Encerrado
+                                  </span>
+                                  <span className="text-[9px] font-bold flex items-center gap-1 mt-1">
+                                    {pred.saved ? (
+                                      <><CheckmarkFilled size={12} className="text-emerald-400" /><span className="text-emerald-400">Palpite registrado</span></>
+                                    ) : (
+                                      <><WarningFilled size={12} className="text-gray-500" /><span className="text-gray-500">Sem palpite</span></>
+                                    )}
+                                  </span>
+                                </div>
+                              ) : (
+                                /* Normal editable state */
+                                <>
+                                  <button
+                                    onClick={() => submitPrediction(match.id)}
+                                    disabled={savingBetId === match.id || isGroupRequiredLocked}
+                                    className={`w-full md:w-auto px-4 py-2 font-bold text-xs rounded border-0 text-white cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                      pred.saved 
+                                        ? 'bg-emerald-600 hover:bg-emerald-700' 
+                                        : 'bg-blue-600 hover:bg-blue-700'
+                                    }`}
+                                  >
+                                    {savingBetId === match.id 
+                                      ? 'Salvando...' 
+                                      : pred.saved 
+                                        ? '✓ Salvo' 
+                                        : 'Salvar'}
+                                  </button>
+                                  
+                                  <span className="text-[9px] font-bold text-gray-500 flex items-center gap-1 mt-1">
+                                    {pred.saved ? (
+                                      <>
+                                        <CheckmarkFilled size={12} className="text-emerald-400" />
+                                        Palpite gravado
+                                      </>
+                                    ) : (
+                                      <>
+                                        <WarningFilled size={12} className="text-orange-400" />
+                                        Alterações pendentes
+                                      </>
+                                    )}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );

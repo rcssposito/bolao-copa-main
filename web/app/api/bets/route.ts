@@ -63,8 +63,7 @@ export async function POST(request: NextRequest) {
         palpite_casa: parseInt(palpite_casa, 10),
         palpite_fora: parseInt(palpite_fora, 10),
         resultado_radio,
-        pontos: 0, // Reset points to 0 since match hasn't finished yet
-        created_at: new Date().toISOString()
+        pontos: 0 // Reset points to 0 since match hasn't finished yet
       }, {
         onConflict: 'usuario_id,jogo_id'
       })
