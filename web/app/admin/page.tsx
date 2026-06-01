@@ -18,20 +18,7 @@ import {
   TagItem
 } from '@/lib/api';
 
-import { 
-  Button, 
-  TextInput, 
-  Select, 
-  SelectItem, 
-  Tile, 
-  Loading, 
-  Tag,
-  Header,
-  HeaderName,
-  Theme,
-  Toggle,
-  Modal
-} from '@carbon/react';
+
 
 import { 
   ArrowLeft, 
@@ -333,46 +320,37 @@ export default function AdminPage() {
 
   if (authLoading) {
     return (
-      <Theme theme="g100">
-        <div className="min-h-screen bg-[#0c0c0c] flex flex-col items-center justify-center">
-          <Loading withOverlay={false} description="Verificando..." />
-          <p className="text-gray-400 font-semibold mt-4">Verificando credenciais de admin...</p>
-        </div>
-      </Theme>
+      <div className="min-h-screen bg-[#0c0c0c] flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-4"></div>
+        <p className="text-gray-400 font-semibold">Verificando credenciais de admin...</p>
+      </div>
     );
   }
 
   if (!isAuthorized) {
     return (
-      <Theme theme="g100">
-        <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center">
-          <div className="text-xl text-red-500 font-bold">Redirecionando...</div>
-        </div>
-      </Theme>
+      <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center">
+        <div className="text-xl text-red-500 font-bold">Redirecionando...</div>
+      </div>
     );
   }
 
   return (
-    <Theme theme="g100">
-      <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased">
-        {/* Carbon Header */}
-        <Header aria-label="Painel Admin">
-          <HeaderName href="#" prefix="">
-            Administração
-          </HeaderName>
-          <div className="absolute right-4 top-0 h-full flex items-center">
-            <Button
-              as={Link}
-              href="/"
-              kind="ghost"
-              size="sm"
-              renderIcon={ArrowLeft}
-              className="text-xs font-semibold px-3 py-1.5 h-8 text-gray-400 hover:text-white flex items-center"
-            >
-              Voltar ao Bolão
-            </Button>
-          </div>
-        </Header>
+    <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased">
+      {/* Top Header Navigation */}
+      <header className="h-12 w-full bg-[#161616]/80 backdrop-blur-md border-b border-gray-900 fixed top-0 left-0 z-40 flex items-center px-4 justify-between">
+        <span className="font-bold text-white tracking-tight">Administração</span>
+        
+        <div>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors font-semibold py-1.5 px-3 bg-transparent border-0 cursor-pointer no-underline"
+          >
+            <ArrowLeft size={14} />
+            Voltar ao Bolão
+          </Link>
+        </div>
+      </header>
 
         {/* Dashboard Spacing */}
         <div className="pt-16"></div>
@@ -388,20 +366,19 @@ export default function AdminPage() {
                 Gerencie usuários, e-mails de acesso, grupos e pagamentos
               </p>
             </div>
-            <Button
-              kind="primary"
-              size="md"
-              renderIcon={Renew}
+            <button
+              type="button"
               onClick={handleManualSync}
               disabled={syncing}
-              className="bg-indigo-600 hover:bg-indigo-700 font-bold border-0"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-xs border-0 cursor-pointer disabled:opacity-50 transition-colors"
             >
+              <Renew size={16} className={syncing ? "animate-spin" : ""} />
               {syncing ? 'Sincronizando...' : 'Sincronizar Resultados da FIFA'}
-            </Button>
+            </button>
           </div>
 
           {/* Active Competition Settings */}
-          <Tile className="glass-card p-6 mb-8 rounded-lg">
+          <div className="glass-card p-6 mb-8 rounded-lg">
             <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
               🏆 Competição Ativa do Bolão
             </h2>
@@ -414,90 +391,100 @@ export default function AdminPage() {
             ) : (
               <div className="flex flex-col sm:flex-row gap-4 items-end max-w-xl">
                 <div className="flex-1 w-full">
-                  <Select
-                    id="active-comp-select"
-                    labelText="Campeonato Selecionado"
-                    value={activeCompCode}
-                    onChange={(e) => setActiveCompCode(e.target.value)}
-                    disabled={changingComp}
-                  >
-                    {competitions.map(comp => (
-                      <SelectItem 
-                        key={comp.code} 
-                        value={comp.code} 
-                        text={`${comp.name} (${comp.code})`} 
-                      />
-                    ))}
-                  </Select>
+                  <div className="flex flex-col gap-1 w-full text-left">
+                    <label htmlFor="active-comp-select" className="text-xs font-bold text-gray-400">Campeonato Selecionado</label>
+                    <select
+                      id="active-comp-select"
+                      value={activeCompCode}
+                      onChange={(e) => setActiveCompCode(e.target.value)}
+                      disabled={changingComp}
+                      className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
+                    >
+                      {competitions.map(comp => (
+                        <option key={comp.code} value={comp.code}>
+                          {comp.name} ({comp.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <Button
-                  kind="danger"
+                <button
+                  type="button"
                   onClick={() => openConfirmCompModal(activeCompCode)}
                   disabled={changingComp || !activeCompCode}
-                  className="h-10 px-6 font-bold flex items-center justify-center cds--btn--danger"
+                  className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded text-xs border-0 cursor-pointer disabled:opacity-50 transition-colors flex items-center justify-center"
                 >
                   {changingComp ? 'Atualizando...' : 'Definir e Sincronizar'}
-                </Button>
+                </button>
               </div>
             )}
-          </Tile>
+          </div>
 
           {/* Add User Form using Carbon Tile */}
-          <Tile className="glass-card p-6 mb-8 rounded-lg">
+          <div className="glass-card p-6 mb-8 rounded-lg">
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <Add size={18} className="text-indigo-400" /> Adicionar Usuário Manualmente
             </h2>
             <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div className="space-y-1">
-                <TextInput
-                  id="new-username"
-                  labelText="Nome"
-                  placeholder="Nome do usuário"
-                  value={newUserName}
-                  onChange={(e) => setNewUserName(e.target.value)}
-                  required
-                />
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label htmlFor="new-username" className="text-xs font-bold text-gray-400">Nome</label>
+                  <input
+                    id="new-username"
+                    type="text"
+                    placeholder="Nome do usuário"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    required
+                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
+                  />
+                </div>
               </div>
               
               <div className="space-y-1">
-                <TextInput
-                  id="new-useremail"
-                  labelText="E-mail (Google Login)"
-                  placeholder="exemplo@gmail.com"
-                  type="email"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  required
-                />
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label htmlFor="new-useremail" className="text-xs font-bold text-gray-400">E-mail (Google Login)</label>
+                  <input
+                    id="new-useremail"
+                    type="email"
+                    placeholder="exemplo@gmail.com"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    required
+                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1">
-                <Select
-                  id="new-usergroup"
-                  labelText="Grupo (Opcional)"
-                  value={newUserGroup}
-                  onChange={(e) => setNewUserGroup(e.target.value)}
-                >
-                  <SelectItem value="" text="Nenhum grupo" />
-                  {tags.map(t => (
-                    <SelectItem key={t.codigo} value={t.nome} text={t.nome} />
-                  ))}
-                </Select>
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label htmlFor="new-usergroup" className="text-xs font-bold text-gray-400">Grupo (Opcional)</label>
+                  <select
+                    id="new-usergroup"
+                    value={newUserGroup}
+                    onChange={(e) => setNewUserGroup(e.target.value)}
+                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">Nenhum grupo</option>
+                    {tags.map(t => (
+                      <option key={t.codigo} value={t.nome}>{t.nome}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <Button
+              <button
                 type="submit"
-                size="md"
-                renderIcon={Add}
-                className="bg-indigo-600 hover:bg-indigo-700 font-bold"
+                className="h-10 w-full px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-xs border-0 cursor-pointer disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
               >
+                <Add size={16} />
                 Cadastrar
-              </Button>
+              </button>
             </form>
-          </Tile>
+          </div>
 
           {/* Tag Management Form & List using Carbon Tile */}
-          <Tile className="glass-card p-6 mb-8 rounded-lg">
+          <div className="glass-card p-6 mb-8 rounded-lg">
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               👥 Gerenciar Grupos (Tags)
             </h2>
@@ -506,31 +493,38 @@ export default function AdminPage() {
               <div className="lg:col-span-1 border-b lg:border-b-0 lg:border-r border-gray-800 pb-6 lg:pb-0 lg:pr-6">
                 <h3 className="text-sm font-bold text-gray-300 mb-3">Criar Novo Grupo</h3>
                 <form onSubmit={createTag} className="space-y-4">
-                  <TextInput
-                    id="new-tagname"
-                    labelText="Nome do Grupo"
-                    placeholder="Ex: Franga Toys"
-                    value={newTagName}
-                    onChange={(e) => setNewTagName(e.target.value)}
-                    required
-                  />
-                  <TextInput
-                    id="new-tagcode"
-                    labelText="Código de Ingresso"
-                    placeholder="Ex: FT2026"
-                    value={newTagCode}
-                    onChange={(e) => setNewTagCode(e.target.value)}
-                    required
-                  />
-                  <Button
+                  <div className="flex flex-col gap-1 w-full text-left">
+                    <label htmlFor="new-tagname" className="text-xs font-bold text-gray-400">Nome do Grupo</label>
+                    <input
+                      id="new-tagname"
+                      type="text"
+                      placeholder="Ex: Franga Toys"
+                      value={newTagName}
+                      onChange={(e) => setNewTagName(e.target.value)}
+                      required
+                      className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 w-full text-left">
+                    <label htmlFor="new-tagcode" className="text-xs font-bold text-gray-400">Código de Ingresso</label>
+                    <input
+                      id="new-tagcode"
+                      type="text"
+                      placeholder="Ex: FT2026"
+                      value={newTagCode}
+                      onChange={(e) => setNewTagCode(e.target.value)}
+                      required
+                      className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
+                    />
+                  </div>
+                  <button
                     type="submit"
-                    size="sm"
                     disabled={savingTag}
-                    renderIcon={Add}
-                    className="w-full bg-orange-600 hover:bg-orange-700 font-bold border-0"
+                    className="w-full h-9 px-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded text-xs border-0 cursor-pointer disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
                   >
+                    <Add size={14} />
                     {savingTag ? 'Criando...' : 'Criar Grupo'}
-                  </Button>
+                  </button>
                 </form>
               </div>
 
@@ -548,15 +542,14 @@ export default function AdminPage() {
                             <div className="text-xs font-bold text-white">{tag.nome}</div>
                             <div className="text-[10px] text-indigo-400 font-medium mt-0.5">Código: <span className="font-bold text-gray-300">{tag.codigo}</span></div>
                           </div>
-                          <Button
-                            kind="danger--ghost"
-                            size="sm"
-                            hasIconOnly
-                            iconDescription="Excluir grupo"
-                            renderIcon={TrashCan}
+                          <button
+                            type="button"
                             onClick={() => deleteTag(tag.nome)}
-                            className="hover:bg-red-950/20 text-red-400 border border-red-500/10 hover:border-red-500/20"
-                          />
+                            title="Excluir grupo"
+                            className="h-8 w-8 rounded bg-transparent hover:bg-red-950/30 text-red-400 hover:text-red-300 flex items-center justify-center border border-red-500/10 hover:border-red-500/25 transition-colors cursor-pointer"
+                          >
+                            <TrashCan size={16} />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -564,23 +557,22 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-          </Tile>
+          </div>
 
           {/* Users List using Carbon Table styled markup */}
-          <Tile className="glass-panel rounded-lg p-0 overflow-hidden shadow-xl">
+          <div className="glass-panel rounded-lg p-0 overflow-hidden shadow-xl">
             <div className="px-6 py-4 bg-slate-900/80 border-b border-gray-800 flex justify-between items-center">
               <h2 className="text-lg font-bold text-white">
                 👥 Participantes Cadastrados ({users.length})
               </h2>
-              <Button
-                kind="ghost"
-                size="sm"
-                renderIcon={Renew}
+              <button
+                type="button"
                 onClick={loadUsers}
-                className="text-gray-400 hover:text-white"
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-white/5 text-gray-400 hover:text-white font-semibold rounded text-xs border border-transparent hover:border-gray-800 cursor-pointer transition-colors"
               >
+                <Renew size={14} />
                 Atualizar Lista
-              </Button>
+              </button>
             </div>
             
             <div className="overflow-x-auto">
@@ -663,37 +655,36 @@ export default function AdminPage() {
                           onClick={() => togglePaid(user.id, user.pagou)}
                           className="cursor-pointer border-0 bg-transparent p-0 inline-block focus:outline-none"
                         >
-                          <Tag
-                            type={user.pagou ? "green" : "red"}
-                            className="font-bold cursor-pointer text-xs uppercase"
-                          >
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors duration-200 ${
+                            user.pagou 
+                              ? 'bg-green-950/45 text-green-400 border border-green-500/20 hover:bg-green-950/65' 
+                              : 'bg-red-950/45 text-red-400 border border-red-500/20 hover:bg-red-950/65'
+                          }`}>
                             {user.pagou ? 'Pago' : 'Pendente'}
-                          </Tag>
+                          </span>
                         </button>
                       </td>
 
                       {/* Ações: Editar e Deletar */}
                       <td className="py-3.5 px-6 text-center">
                         <div className="flex justify-center gap-2">
-                          <Button
-                            kind="ghost"
-                            size="sm"
-                            hasIconOnly
-                            iconDescription="Editar participante"
-                            renderIcon={Edit}
+                          <button
+                            type="button"
                             onClick={() => openEditModal(user)}
-                            className="hover:bg-indigo-950/20 text-indigo-400 border border-indigo-500/10 hover:border-indigo-500/20"
-                          />
-                          <Button
-                            kind="danger--ghost"
-                            size="sm"
-                            hasIconOnly
-                            iconDescription="Deletar participante"
-                            renderIcon={TrashCan}
-                            disabled={user.is_admin}
+                            title="Editar participante"
+                            className="h-8 w-8 rounded bg-transparent hover:bg-indigo-950/30 text-indigo-400 hover:text-indigo-300 flex items-center justify-center border border-indigo-500/10 hover:border-indigo-500/25 transition-colors cursor-pointer"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => deleteUser(user.id)}
-                            className="hover:bg-red-950/20 text-red-400 border border-red-500/10 hover:border-red-500/20"
-                          />
+                            disabled={user.is_admin}
+                            title="Deletar participante"
+                            className="h-8 w-8 rounded bg-transparent hover:bg-red-950/30 text-red-400 hover:text-red-300 flex items-center justify-center border border-red-500/10 hover:border-red-500/25 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <TrashCan size={16} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -710,7 +701,7 @@ export default function AdminPage() {
                 </p>
               </div>
             )}
-          </Tile>
+          </div>
         </div>
 
         {/* Custom Edit User Modal */}
@@ -735,64 +726,81 @@ export default function AdminPage() {
               </div>
               
               <form onSubmit={handleUpdateUser} className="space-y-4">
-                <TextInput
-                  id="edit-username"
-                  labelText="Nome"
-                  value={editUserName}
-                  onChange={(e) => setEditUserName(e.target.value)}
-                  required
-                />
-                <TextInput
-                  id="edit-useremail"
-                  labelText="E-mail de Acesso"
-                  value={editUserEmail}
-                  onChange={(e) => setEditUserEmail(e.target.value)}
-                  required
-                />
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label htmlFor="edit-username" className="text-xs font-bold text-gray-400">Nome</label>
+                  <input
+                    id="edit-username"
+                    type="text"
+                    value={editUserName}
+                    onChange={(e) => setEditUserName(e.target.value)}
+                    required
+                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label htmlFor="edit-useremail" className="text-xs font-bold text-gray-400">E-mail de Acesso</label>
+                  <input
+                    id="edit-useremail"
+                    type="email"
+                    value={editUserEmail}
+                    onChange={(e) => setEditUserEmail(e.target.value)}
+                    required
+                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all"
+                  />
+                </div>
                 
                 {/* Group dropdown populated with tags */}
-                <Select
-                  id="edit-usergroup"
-                  labelText="Grupo / Tag"
-                  value={editUserGroup}
-                  onChange={(e) => setEditUserGroup(e.target.value)}
-                >
-                  <SelectItem value="" text="Nenhum grupo" />
-                  {tags.map(t => (
-                    <SelectItem key={t.codigo} value={t.nome} text={t.nome} />
-                  ))}
-                </Select>
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label htmlFor="edit-usergroup" className="text-xs font-bold text-gray-400">Grupo / Tag</label>
+                  <select
+                    id="edit-usergroup"
+                    value={editUserGroup}
+                    onChange={(e) => setEditUserGroup(e.target.value)}
+                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">Nenhum grupo</option>
+                    {tags.map(t => (
+                      <option key={t.codigo} value={t.nome}>{t.nome}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Is Admin Toggle */}
-                <div className="pt-2">
-                  <Toggle
-                    id="edit-userisadmin"
-                    labelText="Privilégios de Administrador"
-                    labelA="Não"
-                    labelB="Sim"
-                    toggled={editUserIsAdmin}
-                    onToggle={(checked) => setEditUserIsAdmin(checked)}
-                  />
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-xs font-bold text-gray-400">Privilégios de Administrador</span>
+                  <button
+                    type="button"
+                    onClick={() => setEditUserIsAdmin(!editUserIsAdmin)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                      editUserIsAdmin ? 'bg-indigo-600' : 'bg-gray-800'
+                    }`}
+                  >
+                    <span className="sr-only">Privilégios de Administrador</span>
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        editUserIsAdmin ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
                 </div>
 
                 <div className="flex gap-3 pt-4 border-t border-gray-800">
-                  <Button
+                  <button
                     type="button"
-                    kind="secondary"
                     onClick={() => {
                       setIsEditModalOpen(false);
                       setSelectedUserToEdit(null);
                     }}
-                    className="flex-1 font-bold"
+                    className="flex-1 py-2.5 bg-transparent hover:bg-white/5 text-gray-300 font-bold rounded text-xs border border-gray-850 cursor-pointer transition-colors"
                   >
                     Cancelar
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     type="submit"
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 font-bold border-0"
+                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-xs border-0 cursor-pointer transition-colors"
                   >
                     Salvar Alterações
-                  </Button>
+                  </button>
                 </div>
               </form>
             </div>
@@ -827,40 +835,36 @@ export default function AdminPage() {
                   Para confirmar, digite <span className="font-bold text-white font-mono">CONFIRMAR</span> abaixo:
                 </p>
                 
-                <TextInput
+                <input
                   id="confirm-comp-input"
-                  labelText=""
-                  hideLabel
+                  type="text"
                   placeholder="Digite CONFIRMAR"
                   value={compConfirmText}
                   onChange={(e) => setCompConfirmText(e.target.value)}
-                  className="w-full font-bold uppercase tracking-wider"
+                  className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-red-500 rounded font-bold text-sm text-white placeholder-gray-600 outline-none transition-all uppercase tracking-wider text-center"
                 />
 
                 <div className="flex gap-3 pt-4 border-t border-gray-800">
-                  <Button
+                  <button
                     type="button"
-                    kind="secondary"
                     onClick={() => setIsConfirmCompModalOpen(false)}
-                    className="flex-1 font-bold"
+                    className="flex-1 py-2.5 bg-transparent hover:bg-white/5 text-gray-300 font-bold rounded text-xs border border-gray-850 cursor-pointer transition-colors"
                   >
                     Cancelar
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     type="button"
-                    kind="danger"
                     disabled={compConfirmText !== 'CONFIRMAR'}
                     onClick={() => handleSaveCompetition(compToSync)}
-                    className="flex-1 font-bold bg-red-600 hover:bg-red-700 border-red-600 cds--btn--danger"
+                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded text-xs border-0 cursor-pointer transition-colors disabled:opacity-50"
                   >
                     Confirmar
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         )}
       </main>
-    </Theme>
   );
 }

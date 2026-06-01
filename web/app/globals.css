@@ -71,37 +71,3 @@ body {
   background: rgba(15, 98, 254, 0.3);
 }
 
-/* Carbon component overrides to match style */
-.cds--header {
-  background-color: rgba(22, 22, 22, 0.8) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-.cds--btn--primary {
-  background-color: var(--ibm-blue-60) !important;
-}
-
-.cds--btn--primary:hover {
-  background-color: var(--ibm-blue-70) !important;
-}
-
-/* Red Danger button overrides */
-.cds--btn--danger, .cds--btn--danger:hover {
-  background-color: #da1e28 !important; /* Carbon danger red */
-  color: #ffffff !important;
-}
-
-.cds--btn--danger:hover {
-  background-color: #ba1b23 !important;
-}
-
-.cds--btn--danger--ghost {
-  color: #ff5c62 !important;
-}
-
-.cds--btn--danger--ghost:hover {
-  background-color: rgba(218, 30, 40, 0.12) !important;
-  color: #ff8389 !important;
-}

@@ -19,19 +19,6 @@ import {
 } from '@/lib/api';
 
 import { 
-  Button, 
-  TextInput, 
-  Select, 
-  SelectItem, 
-  Tile, 
-  Loading, 
-  Tag,
-  Header,
-  HeaderName,
-  Theme
-} from '@carbon/react';
-
-import { 
   Login, 
   Logout, 
   Settings, 
@@ -517,89 +504,80 @@ export default function Home() {
 
   if (loading) {
     return (
-      <Theme theme="g100">
-        <div className="min-h-screen bg-[#0c0c0c] flex flex-col items-center justify-center text-white">
-          <Loading withOverlay={false} description="Carregando..." />
-          <p className="text-gray-400 font-semibold mt-4">Carregando Bolão da Copa...</p>
-        </div>
-      </Theme>
+      <div className="min-h-screen bg-[#0c0c0c] flex flex-col items-center justify-center text-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-4"></div>
+        <p className="text-gray-400 font-semibold">Carregando Bolão...</p>
+      </div>
     );
   }
 
   // Se o usuário logou via Google, mas é novo e precisa do código do grupo
   if (registrationPendingUser) {
     return (
-      <Theme theme="g100">
-        <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased flex flex-col items-center justify-center p-4">
-          <div className="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 shadow-2xl relative overflow-hidden">
-            {/* Background elements */}
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-600/20 rounded-full blur-3xl"></div>
+      <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased flex flex-col items-center justify-center p-4">
+        <div className="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 shadow-2xl relative overflow-hidden">
+          {/* Background elements */}
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-600/20 rounded-full blur-3xl"></div>
+          
+          <div className="relative z-10 text-center">
+            <div className="mx-auto w-16 h-16 bg-blue-600/10 border border-blue-500/30 rounded-full flex items-center justify-center mb-6">
+              <Trophy size={32} className="text-blue-500" />
+            </div>
             
-            <div className="relative z-10 text-center">
-              <div className="mx-auto w-16 h-16 bg-blue-600/10 border border-blue-500/30 rounded-full flex items-center justify-center mb-6">
-                <Trophy size={32} className="text-blue-500" />
+            <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Primeiro Acesso</h1>
+            <p className="text-sm text-gray-400 mb-6 font-medium">
+              Olá, <span className="text-white font-semibold">{registrationPendingUser.nome}</span>! Para participar do Bolão da Copa, você precisa inserir um código de grupo válido.
+            </p>
+            
+            <form onSubmit={handleRegistrationConfirmCode} className="space-y-4 text-left">
+              <div>
+                <label htmlFor="reg-code" className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Código do Grupo
+                </label>
+                <input
+                  type="text"
+                  id="reg-code"
+                  placeholder="Ex: GRUPO2026"
+                  value={registrationCode}
+                  onChange={(e) => setRegistrationCode(e.target.value)}
+                  className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
+                  disabled={confirmingCode}
+                />
               </div>
               
-              <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Primeiro Acesso</h1>
-              <p className="text-sm text-gray-400 mb-6 font-medium">
-                Olá, <span className="text-white font-semibold">{registrationPendingUser.nome}</span>! Para participar do Bolão da Copa, você precisa inserir um código de grupo válido.
-              </p>
-              
-              <form onSubmit={handleRegistrationConfirmCode} className="space-y-4 text-left">
-                <div>
-                  <label htmlFor="reg-code" className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    Código do Grupo
-                  </label>
-                  <TextInput
-                    id="reg-code"
-                    labelText=""
-                    placeholder="Ex: GRUPO2026"
-                    value={registrationCode}
-                    onChange={(e) => setRegistrationCode(e.target.value)}
-                    className="w-full bg-gray-900 border-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    disabled={confirmingCode}
-                    hideLabel
-                  />
-                </div>
-                
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    type="button"
-                    kind="secondary"
-                    className="flex-1"
-                    onClick={handleRegistrationCancel}
-                    disabled={confirmingCode}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 border-blue-600"
-                    disabled={confirmingCode || !registrationCode.trim()}
-                  >
-                    {confirmingCode ? 'Confirmando...' : 'Confirmar'}
-                  </Button>
-                </div>
-              </form>
-            </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleRegistrationCancel}
+                  disabled={confirmingCode}
+                  className="flex-1 py-2.5 bg-gray-850 hover:bg-gray-800 text-gray-300 font-bold rounded text-xs border border-gray-800 cursor-pointer transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={confirmingCode || !registrationCode.trim()}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-xs border-0 cursor-pointer transition-colors disabled:opacity-50"
+                >
+                  {confirmingCode ? 'Confirmando...' : 'Confirmar'}
+                </button>
+              </div>
+            </form>
           </div>
-        </main>
-      </Theme>
+        </div>
+      </main>
     );
   }
 
   // Render Landing Page if User NOT Authenticated
   if (!loggedUser) {
     return (
-      <Theme theme="g100">
-        <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased">
-          {/* Carbon Header */}
-          <Header aria-label="Bolão Copa 2026">
-            <HeaderName href="#" prefix="">
-              Bolão Copa 2026
-            </HeaderName>
-          </Header>
+      <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased">
+        {/* Navigation Header */}
+        <header className="h-12 w-full bg-[#161616]/80 backdrop-blur-md border-b border-gray-900 fixed top-0 left-0 z-40 flex items-center px-4">
+          <span className="font-bold text-white tracking-tight">Bolão Copa 2026</span>
+        </header>
 
           {/* Hero Section */}
           <section className="relative bg-[#161616] pt-28 pb-16 border-b border-gray-900 overflow-hidden">
@@ -620,15 +598,14 @@ export default function Home() {
 
               {/* Carbon Button for Login */}
               <div className="flex flex-col items-center justify-center gap-4">
-                <Button
-                  renderIcon={Login}
+                <button
                   onClick={handleGoogleLogin}
                   disabled={authLoading}
-                  size="lg"
-                  className="px-8 font-bold"
+                  className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors text-sm cursor-pointer flex items-center gap-2 border-0 disabled:opacity-50"
                 >
                   {authLoading ? 'Conectando...' : 'Entrar com o Google'}
-                </Button>
+                  <Login size={20} />
+                </button>
                 <p className="text-xs text-gray-500">Acesso rápido e seguro via OAuth oficial.</p>
               </div>
             </div>
@@ -637,7 +614,7 @@ export default function Home() {
           {/* Dashboard Preview Section (Read Only) */}
           <section className="container mx-auto px-4 py-12 max-w-5xl">
             {/* Pot display using Carbon Tile */}
-            <Tile className="glass-card mb-12 p-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="glass-card mb-12 p-6 flex flex-col md:flex-row justify-between items-center gap-6 rounded-lg">
               <div className="text-center md:text-left flex items-center gap-3">
                 <div className="p-3 bg-emerald-950/40 text-emerald-400 border border-emerald-500/10 rounded-xl">
                   <Finance size={24} />
@@ -647,10 +624,10 @@ export default function Home() {
                   <p className="text-xs text-blue-400 font-medium">{totalPot.usuarios_pagantes} participantes ativos pagantes.</p>
                 </div>
               </div>
-              <div className="text-3xl font-black text-emerald-400 bg-emerald-950/20 px-6 py-3 border border-emerald-500/20">
+              <div className="text-3xl font-black text-emerald-400 bg-emerald-950/20 px-6 py-3 border border-emerald-500/20 rounded-lg">
                 R$ {totalPot.total_pote.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-            </Tile>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Matches Preview */}
@@ -663,16 +640,16 @@ export default function Home() {
                   {matches.slice(0, 4).map(match => {
                     const matchDate = new Date(match.data);
                     return (
-                      <Tile key={match.id} className="glass-card flex justify-between items-center gap-4 py-4">
+                      <div key={match.id} className="glass-card flex justify-between items-center gap-4 py-4 px-6 rounded-lg">
                         <div className="flex-1 text-right font-bold text-sm text-gray-300">{match.time_casa}</div>
                         <div className="flex flex-col items-center gap-1">
                           <span className="text-xs font-bold text-indigo-400">vs</span>
-                          <span className="text-[10px] text-gray-500 font-semibold bg-gray-950 px-2 py-0.5 border border-gray-800">
+                          <span className="text-[10px] text-gray-500 font-semibold bg-gray-950 px-2 py-0.5 border border-gray-800 rounded">
                             {matchDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} {matchDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                         <div className="flex-1 text-left font-bold text-sm text-gray-300">{match.time_fora}</div>
-                      </Tile>
+                      </div>
                     );
                   })}
                 </div>
@@ -718,37 +695,36 @@ export default function Home() {
             <p>Bolão Copa do Mundo 2026 - Acesso restrito a participantes autorizados.</p>
           </footer>
         </main>
-      </Theme>
     );
   }
 
   // Render Full Betting Dashboard if Authenticated
   return (
-    <Theme theme="g100">
-      <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased flex flex-col">
-        {/* Carbon Header */}
-        <Header aria-label="Bolão Copa 2026" className="border-b border-gray-900 bg-gray-950/85 backdrop-blur-md">
-          <HeaderName href="#" prefix="">
-            Bolão Copa 2026
-          </HeaderName>
-          
-          {/* User profile action badge directly in Carbon layout */}
-          <div className="absolute right-4 top-0 h-full flex items-center gap-3">
-            {/* Visual icons to match the mockup */}
-            <button className="text-gray-400 hover:text-white p-1.5 bg-transparent border-0 cursor-pointer hidden sm:block">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </button>
-            <button className="text-gray-400 hover:text-white p-1.5 bg-transparent border-0 cursor-pointer hidden sm:block">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-            </button>
-            <button className="text-gray-400 hover:text-white p-1.5 bg-transparent border-0 cursor-pointer hidden sm:block">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            </button>
-            <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-sm text-blue-400">
-              {loggedUser.nome.slice(0,2).toUpperCase()}
-            </div>
+    <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased flex flex-col">
+      {/* Navigation Header */}
+      <header className="h-12 w-full bg-[#161616]/80 backdrop-blur-md border-b border-gray-900 fixed top-0 left-0 z-40 flex items-center px-4 justify-between">
+        <span className="font-bold text-white tracking-tight">Bolão Copa 2026</span>
+        
+        {/* User profile action badge */}
+        <div className="flex items-center gap-3">
+          {loggedUser.is_admin && (
+            <Link 
+              href="/admin" 
+              className="text-gray-400 hover:text-white p-1.5 transition-colors flex items-center bg-transparent border-0 cursor-pointer mr-1"
+              title="Painel Admin"
+            >
+              <Settings size={20} />
+            </Link>
+          )}
+          <div className="flex flex-col text-right">
+            <span className="text-[9px] text-blue-400 uppercase font-black tracking-wider leading-none">Conectado como</span>
+            <span className="text-xs font-bold text-white mt-1">{loggedUser.nome}</span>
           </div>
-        </Header>
+          <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-sm text-blue-400">
+            {loggedUser.nome.slice(0,2).toUpperCase()}
+          </div>
+        </div>
+      </header>
 
         {/* Flex layout for sidebar and content */}
         <div className="flex pt-12 min-h-screen">
@@ -853,30 +829,6 @@ export default function Home() {
                   <h1 className="text-2xl font-black text-white tracking-tight leading-none">Dashboard</h1>
                   <p className="text-xs text-gray-500 mt-1.5 font-medium">Bem-vindo de volta ao Bolão.</p>
                 </div>
-                
-                <div className="flex items-center gap-4">
-                  {loggedUser.is_admin && (
-                    <Button
-                      as={Link}
-                      href="/admin"
-                      kind="ghost"
-                      size="sm"
-                      renderIcon={Settings}
-                      className="text-xs font-semibold px-3 py-1.5 h-8 text-amber-400 hover:text-amber-300 hover:bg-slate-900/40 flex items-center"
-                    >
-                      Painel Admin
-                    </Button>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col text-right">
-                      <span className="text-[9px] text-indigo-400 uppercase font-black tracking-wider leading-none">Conectado como</span>
-                      <span className="text-xs font-bold text-white mt-1">{loggedUser.nome}</span>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-sm text-blue-400">
-                      {loggedUser.nome.slice(0,2).toUpperCase()}
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Event Tabs Switcher */}
@@ -920,7 +872,7 @@ export default function Home() {
             {/* Status Dashboard Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               {/* Pote Total Card */}
-              <Tile className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <div className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-emerald-400 font-bold mb-1">💰 Pote Total</div>
                   <div className="text-3xl font-extrabold text-white mt-1">
@@ -931,10 +883,10 @@ export default function Home() {
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   {totalPot.usuarios_pagantes} pagantes {loggedUser.pagou ? '(Você pagou ✓)' : '(Você não pagou ✗)'}
                 </div>
-              </Tile>
+              </div>
 
               {/* Jogos Disponíveis Card */}
-              <Tile className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <div className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-indigo-400 font-bold mb-1">⚽ Jogos Disponíveis</div>
                   <div className="text-3xl font-extrabold text-white mt-1">
@@ -944,10 +896,10 @@ export default function Home() {
                 <div className="text-xs text-gray-400 mt-4">
                   Partidas prontas para palpitar
                 </div>
-              </Tile>
+              </div>
 
               {/* Sua Posição Card */}
-              <Tile className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <div className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-purple-400 font-bold mb-1">🏅 Sua Pontuação</div>
                   <div className="text-3xl font-extrabold text-white mt-1">
@@ -959,10 +911,10 @@ export default function Home() {
                     ? `Você está no ${selectedUserStats.posicao}º lugar do ranking` 
                     : 'Você ainda não está pontuando'}
                 </div>
-              </Tile>
+              </div>
 
               {/* Grupo / Tag Card */}
-              <Tile id="seus-grupos-card" className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <div id="seus-grupos-card" className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-orange-400 font-bold mb-1">👥 Seus Grupos ({userGroups.length})</div>
                   
@@ -988,31 +940,28 @@ export default function Home() {
 
                   <div className="mt-4">
                     <div className="flex gap-1.5 items-center">
-                      <TextInput
+                      <input
+                        type="text"
                         id="join-group-code"
-                        labelText=""
-                        hideLabel
                         placeholder="Código do Grupo"
                         value={groupCode}
                         onChange={(e) => setGroupCode(e.target.value)}
-                        className="h-8 text-xs font-bold w-full"
-                        size="sm"
+                        className="h-8 px-2.5 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded text-xs font-bold w-full text-white placeholder-gray-600 outline-none transition-all"
                       />
-                      <Button
-                        size="sm"
+                      <button
                         onClick={() => handleJoinGroup(groupCode)}
                         disabled={joiningGroup || !groupCode.trim()}
-                        className="bg-orange-600 hover:bg-orange-700 h-8 font-bold px-3 text-xs border-0"
+                        className="bg-orange-600 hover:bg-orange-700 h-8 font-bold px-3 text-xs border-0 rounded text-white cursor-pointer disabled:opacity-50"
                       >
                         Entrar
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 </div>
                 <div className="text-xs text-gray-400 mt-4">
                   Participe de múltiplos grupos!
                 </div>
-              </Tile>
+              </div>
             </div>
 
             {/* Split Layout */}
@@ -1024,12 +973,12 @@ export default function Home() {
                 </h2>
 
                 {matches.length === 0 ? (
-                  <Tile className="glass-panel border-gray-900 p-12 text-center text-gray-500 rounded-lg">
+                  <div className="glass-panel border-gray-900 p-12 text-center text-gray-500 rounded-lg">
                     <p className="text-lg font-semibold mb-2 text-gray-400">Nenhum jogo disponível para palpitar</p>
                     <p className="text-sm max-w-sm mx-auto text-gray-500">
                       Todos os jogos da Copa já começaram ou foram finalizados.
                     </p>
-                  </Tile>
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     {matches.map((match) => {
@@ -1037,7 +986,7 @@ export default function Home() {
                       const matchDate = new Date(match.data);
                       
                       return (
-                        <Tile key={match.id} className="glass-card rounded-lg p-5 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div key={match.id} className="glass-card rounded-lg p-5 flex flex-col md:flex-row justify-between items-center gap-6">
                           {/* Match Info & Teams */}
                           <div className="flex-1 w-full space-y-3">
                             <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider flex items-center gap-1.5">
@@ -1112,14 +1061,13 @@ export default function Home() {
 
                           {/* Submit Bet */}
                           <div className="flex flex-col items-end gap-1 shrink-0 w-full md:w-auto">
-                            <Button
-                              size="sm"
+                            <button
                               onClick={() => submitPrediction(match.id)}
                               disabled={savingBetId === match.id}
-                              className={`w-full md:w-auto font-bold ${
+                              className={`w-full md:w-auto px-4 py-2 font-bold text-xs rounded border-0 text-white cursor-pointer transition-colors disabled:opacity-50 ${
                                 pred.saved 
-                                  ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600' 
-                                  : 'bg-blue-600 hover:bg-blue-700 border-blue-600'
+                                  ? 'bg-emerald-600 hover:bg-emerald-700' 
+                                  : 'bg-blue-600 hover:bg-blue-700'
                               }`}
                             >
                               {savingBetId === match.id 
@@ -1127,7 +1075,7 @@ export default function Home() {
                                 : pred.saved 
                                   ? '✓ Salvo' 
                                   : 'Salvar'}
-                            </Button>
+                            </button>
                             
                             <span className="text-[9px] font-bold text-gray-500 flex items-center gap-1 mt-1 pr-1">
                               {pred.saved ? (
@@ -1143,7 +1091,7 @@ export default function Home() {
                               )}
                             </span>
                           </div>
-                        </Tile>
+                        </div>
                       );
                     })}
                   </div>
@@ -1152,7 +1100,7 @@ export default function Home() {
 
               {/* Ranking Column (Right) */}
               <div id="classificacao-geral" className="lg:col-span-1">
-                <Tile className="glass-panel border-gray-900 p-6 shadow-xl sticky top-20 rounded-lg">
+                <div className="glass-panel border-gray-900 p-6 shadow-xl sticky top-20 rounded-lg">
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2 m-0">
                       <Trophy size={18} className="text-amber-400" />
@@ -1218,9 +1166,9 @@ export default function Home() {
                               <td className="py-3 px-3 truncate max-w-[120px] text-gray-200">
                                 {row.nome}
                                 {row.grupo && (
-                                  <Tag size="sm" type="cool-gray" className="ml-1.5 uppercase font-normal text-[9px] h-4">
+                                  <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-gray-800 text-gray-300 uppercase h-4">
                                     {row.grupo}
-                                  </Tag>
+                                  </span>
                                 )}
                               </td>
                               <td className="py-3 px-3 text-center text-white font-bold">
@@ -1255,7 +1203,7 @@ export default function Home() {
                       * Desempate (Des): Quanto menor o número, mais próximo o palpite do placar real da partida final da Copa.
                     </p>
                   </div>
-                </Tile>
+                </div>
               </div>
             </div>
           </div>
@@ -1266,19 +1214,15 @@ export default function Home() {
           <p className="mb-4">Desenvolvido para a Copa do Mundo 2026 🌎⚽</p>
           
           {loggedUser.is_admin && (
-            <Button
-              as={Link}
+            <Link
               href="/admin"
-              kind="ghost"
-              renderIcon={Settings}
-              size="sm"
-              className="text-gray-400 hover:text-gray-200"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors font-semibold py-1.5 px-3 bg-transparent border-0 cursor-pointer no-underline"
             >
+              <Settings size={14} />
               Acessar Painel Administrativo
-            </Button>
+            </Link>
           )}
         </footer>
       </main>
-    </Theme>
-  );
-}
+    );
+  }

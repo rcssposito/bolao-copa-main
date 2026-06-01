@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import '@carbon/react/index.scss'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -14,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="cds--g100">{children}</body>
+      <body className="bg-[#0c0c0c] text-gray-100 font-sans antialiased">{children}</body>
     </html>
   )
 }
