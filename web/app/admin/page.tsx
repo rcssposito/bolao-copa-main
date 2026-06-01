@@ -151,13 +151,23 @@ export default function AdminPage() {
     setIsConfirmCompModalOpen(true);
   };
 
+  const handleToggleComp = (code: string) => {
+    let list = activeCompCode.split(',').map(c => c.trim()).filter(c => c.length > 0);
+    if (list.includes(code)) {
+      list = list.filter(c => c !== code);
+    } else {
+      list.push(code);
+    }
+    setActiveCompCode(list.join(','));
+  };
+
   const handleSaveCompetition = async (code: string) => {
     setIsConfirmCompModalOpen(false);
     try {
       setChangingComp(true);
       const res = await updateActiveCompetition(code);
       setActiveCompCode(code);
-      alert(res.data.message || 'Competição ativa atualizada e sincronizada com sucesso!');
+      alert(res.data.message || 'Competições ativas atualizadas e sincronizadas com sucesso!');
       await loadUsers();
     } catch (error: any) {
       console.error('Erro ao salvar competição ativa:', error);
@@ -380,42 +390,54 @@ export default function AdminPage() {
           {/* Active Competition Settings */}
           <div className="glass-card p-6 mb-8 rounded-lg">
             <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-              🏆 Competição Ativa do Bolão
+              🏆 Competições Ativas do Bolão
             </h2>
             <p className="text-xs text-gray-400 mb-4 font-medium">
-              Escolha qual competição da API de Futebol carregar e manter ativa. Novas partidas serão importadas sem apagar os dados dos outros campeonatos.
+              Escolha quais competições da API de Futebol carregar e manter ativas simultaneamente. Novas partidas serão importadas sem apagar os dados dos outros campeonatos.
             </p>
             
             {loadingComps ? (
               <p className="text-xs text-gray-500 font-medium">Carregando campeonatos disponíveis da API...</p>
             ) : (
-              <div className="flex flex-col sm:flex-row gap-4 items-end max-w-xl">
-                <div className="flex-1 w-full">
-                  <div className="flex flex-col gap-1 w-full text-left">
-                    <label htmlFor="active-comp-select" className="text-xs font-bold text-gray-400">Campeonato Selecionado</label>
-                    <select
-                      id="active-comp-select"
-                      value={activeCompCode}
-                      onChange={(e) => setActiveCompCode(e.target.value)}
-                      disabled={changingComp}
-                      className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
-                    >
-                      {competitions.map(comp => (
-                        <option key={comp.code} value={comp.code}>
-                          {comp.name} ({comp.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              <div className="space-y-4 max-w-2xl">
+                <label className="text-xs font-bold text-gray-400">Campeonatos Selecionados</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto p-3 bg-gray-950/45 border border-gray-800 rounded">
+                  {competitions.map((comp) => {
+                    const isChecked = activeCompCode.split(',').map(c => c.trim()).includes(comp.code);
+                    return (
+                      <label
+                        key={comp.code}
+                        className={`flex items-center gap-3 p-2.5 border rounded cursor-pointer transition-all duration-200 select-none ${
+                          isChecked
+                            ? 'bg-indigo-950/20 border-indigo-500/40 text-white'
+                            : 'bg-transparent border-gray-850 hover:bg-white/5 text-gray-400 hover:text-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleComp(comp.code)}
+                          disabled={changingComp}
+                          className="h-4 w-4 rounded border-gray-850 text-indigo-600 focus:ring-indigo-500 bg-gray-950 accent-indigo-500 cursor-pointer"
+                        />
+                        <div className="flex flex-col text-left">
+                          <span className="text-xs font-bold">{comp.name}</span>
+                          <span className="text-[10px] text-gray-500 font-semibold">{comp.code}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openConfirmCompModal(activeCompCode)}
-                  disabled={changingComp || !activeCompCode}
-                  className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded text-xs border-0 cursor-pointer disabled:opacity-50 transition-colors flex items-center justify-center"
-                >
-                  {changingComp ? 'Atualizando...' : 'Definir e Sincronizar'}
-                </button>
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => openConfirmCompModal(activeCompCode)}
+                    disabled={changingComp || !activeCompCode.trim()}
+                    className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded text-xs border-0 cursor-pointer disabled:opacity-50 transition-colors flex items-center justify-center"
+                  >
+                    {changingComp ? 'Atualizando...' : 'Definir e Sincronizar'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -826,10 +848,10 @@ export default function AdminPage() {
               
               <div className="space-y-4 text-sm text-gray-300">
                 <p>
-                  Você está prestes a ativar e sincronizar a competição <span className="font-bold text-white">{compToSync}</span>.
+                  Você está prestes a ativar e sincronizar as competições: <span className="font-bold text-white">{compToSync.split(',').join(', ')}</span>.
                 </p>
                 <div className="bg-red-950/15 border border-red-500/10 p-3.5 rounded text-xs text-red-400 font-medium">
-                  <strong>Atenção:</strong> Esta operação fará requisições adicionais à API e importará novas partidas. Certifique-se de que a chave da API está correta.
+                  <strong>Atenção:</strong> Esta operação fará requisições adicionais à API e importará novas partidas para todas as ligas selecionadas. Certifique-se de que a chave da API está correta.
                 </div>
                 <p className="text-xs">
                   Para confirmar, digite <span className="font-bold text-white font-mono">CONFIRMAR</span> abaixo:

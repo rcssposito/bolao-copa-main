@@ -13,14 +13,21 @@ export async function GET(request: NextRequest) {
         .select('value')
         .eq('key', 'active_competition')
         .maybeSingle();
-      comp = configData?.value || 'WC';
+      const activeValue = configData?.value || 'WC';
+      comp = activeValue.split(',')[0].trim() || 'WC';
+    } else if (comp.includes(',')) {
+      comp = comp.split(',')[0].trim();
     }
+
+    const limitDate = new Date();
+    limitDate.setDate(limitDate.getDate() + 30);
 
     const { data, error } = await supabase
       .from('matches')
       .select('*')
       .in('status', ['SCHEDULED', 'LIVE', 'POSTPONED'])
       .eq('competition', comp)
+      .lte('data', limitDate.toISOString())
       .order('data', { ascending: true });
 
     if (error) throw error;

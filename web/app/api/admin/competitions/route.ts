@@ -3,14 +3,27 @@ import { supabase } from '@/lib/supabase';
 import { fullSync } from '@/lib/sync';
 import axios from 'axios';
 
+const STATIC_COMPETITIONS = [
+  { id: 2000, name: 'FIFA World Cup', code: 'WC', emblem: '' },
+  { id: 2001, name: 'UEFA Champions League', code: 'CL', emblem: '' },
+  { id: 2013, name: 'Campeonato Brasileiro Série A', code: 'BSA', emblem: '' },
+  { id: 2152, name: 'Copa Libertadores', code: 'CLI', emblem: '' },
+  { id: 2021, name: 'Premier League', code: 'PL', emblem: '' },
+  { id: 2014, name: 'Primera Division (La Liga)', code: 'PD', emblem: '' },
+  { id: 2002, name: 'Bundesliga', code: 'BL1', emblem: '' },
+  { id: 2019, name: 'Serie A (Itália)', code: 'SA', emblem: '' },
+  { id: 2015, name: 'Ligue 1', code: 'FL1', emblem: '' },
+  { id: 2003, name: 'Eredivisie', code: 'DED', emblem: '' },
+  { id: 2017, name: 'Primeira Liga (Portugal)', code: 'PPL', emblem: '' },
+  { id: 2016, name: 'Championship', code: 'ELC', emblem: '' },
+  { id: 2018, name: 'European Championship (Euro)', code: 'EC', emblem: '' }
+];
+
 // GET /api/admin/competitions
 // Returns available competitions from football API and the currently active one
 export async function GET() {
   try {
     const apiKey = process.env.FOOTBALL_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Chave da API de futebol (FOOTBALL_API_KEY) não configurada.' }, { status: 500 });
-    }
 
     // 1. Get current active competition from database config
     const { data: configData, error: configError } = await supabase
@@ -23,20 +36,29 @@ export async function GET() {
     const activeCode = configData?.value || 'WC';
 
     // 2. Fetch available competitions from football-data.org API
-    const response = await axios.get('https://api.football-data.org/v4/competitions', {
-      headers: { 'X-Auth-Token': apiKey },
-      timeout: 15000,
-    });
+    let competitions = [];
+    if (apiKey) {
+      try {
+        const response = await axios.get('https://api.football-data.org/v4/competitions', {
+          headers: { 'X-Auth-Token': apiKey },
+          timeout: 10000,
+        });
 
-    const apiCompetitions = response.data.competitions || [];
-    
-    // Map list to return clean names and codes
-    const competitions = apiCompetitions.map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      code: c.code,
-      emblem: c.emblem
-    }));
+        const apiCompetitions = response.data.competitions || [];
+        competitions = apiCompetitions.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          code: c.code,
+          emblem: c.emblem
+        }));
+      } catch (apiError: any) {
+        console.warn('Falha ao consultar API de futebol (usando fallback estático):', apiError.message);
+        competitions = STATIC_COMPETITIONS;
+      }
+    } else {
+      console.warn('Chave da API de futebol não configurada (usando fallback estático).');
+      competitions = STATIC_COMPETITIONS;
+    }
 
     return NextResponse.json({
       active: activeCode,
@@ -49,14 +71,9 @@ export async function GET() {
 }
 
 // POST /api/admin/competitions
-// Sets the active competition, clears the old matches, and triggers a full sync for the new one
+// Sets the active competitions list
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.FOOTBALL_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Chave da API de futebol (FOOTBALL_API_KEY) não configurada.' }, { status: 500 });
-    }
-
     const body = await request.json();
     const { code } = body;
 
@@ -64,24 +81,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Código da competição é obrigatório.' }, { status: 400 });
     }
 
-    // 1. Save new active competition to config table
+    const value = Array.isArray(code) ? code.join(',') : code.toString();
+
+    // 1. Save new active competition list to config table
     const { error: configError } = await supabase
       .from('config')
       .upsert({
         key: 'active_competition',
-        value: code,
+        value: value,
         updated_at: new Date().toISOString()
       });
 
     if (configError) throw configError;
 
-    // 2. Do not clear matches table so that we preserve matches and bets for all competitions.
-    // The sync will simply insert/update matches of the new competition.
-
-    // 3. Do not trigger full sync here. Sync should only run when the user clicks the button.
     return NextResponse.json({
       success: true,
-      message: `Competição ativa alterada para ${code} com sucesso. Por favor, clique em 'Sincronizar' para trazer os novos jogos.`
+      message: `Competições ativas alteradas para ${value} com sucesso. Por favor, clique em 'Sincronizar' para trazer os novos jogos.`
     });
 
   } catch (error: any) {

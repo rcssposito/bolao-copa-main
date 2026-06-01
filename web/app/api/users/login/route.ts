@@ -50,52 +50,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(newUser, { status: 201 });
     }
 
-    // For new non-admin users, we REQUIRE a valid group code to register
-    if (!code || code.trim() === '') {
-      return NextResponse.json({ 
-        error: 'REGISTRATION_REQUIRED_CODE', 
-        message: 'Código de grupo é obrigatório para novos participantes.' 
-      }, { status: 202 });
+    let userGroup = null;
+
+    if (code && code.trim() !== '') {
+      // Load tags config to validate code
+      const { data: configData, error: configError } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', 'tags')
+        .maybeSingle();
+
+      if (configError) throw configError;
+
+      if (!configData) {
+        return NextResponse.json({ 
+          error: 'NO_GROUPS_SETUP', 
+          message: 'Nenhum grupo cadastrado no sistema. Contate o administrador.' 
+        }, { status: 400 });
+      }
+
+      const tags = JSON.parse(configData.value);
+      
+      // Find matching tag by code (case-insensitive)
+      const matchingTag = tags.find(
+        (t: { nome: string; codigo: string }) => 
+          t.codigo.trim().toLowerCase() === code.trim().toLowerCase()
+      );
+
+      if (!matchingTag) {
+        return NextResponse.json({ 
+          error: 'INVALID_GROUP_CODE', 
+          message: 'Código de grupo inválido ou inexistente.' 
+        }, { status: 400 });
+      }
+
+      userGroup = matchingTag.nome;
     }
 
-    // Load tags config to validate code
-    const { data: configData, error: configError } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'tags')
-      .maybeSingle();
-
-    if (configError) throw configError;
-
-    if (!configData) {
-      return NextResponse.json({ 
-        error: 'NO_GROUPS_SETUP', 
-        message: 'Nenhum grupo cadastrado no sistema. Contate o administrador.' 
-      }, { status: 400 });
-    }
-
-    const tags = JSON.parse(configData.value);
-    
-    // Find matching tag by code (case-insensitive)
-    const matchingTag = tags.find(
-      (t: { nome: string; codigo: string }) => 
-        t.codigo.trim().toLowerCase() === code.trim().toLowerCase()
-    );
-
-    if (!matchingTag) {
-      return NextResponse.json({ 
-        error: 'INVALID_GROUP_CODE', 
-        message: 'Código de grupo inválido ou inexistente.' 
-      }, { status: 400 });
-    }
-
-    // Create new user record associated with the group
+    // Create new user record
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
         nome,
         email,
-        grupo: matchingTag.nome,
+        grupo: userGroup,
         pagou: false,
         is_admin: false,
         created_at: new Date().toISOString()

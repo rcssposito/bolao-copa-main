@@ -12,6 +12,7 @@ import {
   loginUser,
   joinGroup,
   getGroupRanking,
+  getCompetitions,
   User,
   Match,
   RankingUser,
@@ -32,6 +33,224 @@ import {
   UserMultiple,
   Group
 } from '@carbon/icons-react';
+
+// Helper function to map team name to flag image URL from FlagCDN
+const getFlagUrl = (teamName: string): string => {
+  if (!teamName) return '';
+  const normalized = teamName.toLowerCase().trim();
+  
+  // Mapping of common team/club names to ISO 2-letter country codes
+  const mapping: { [key: string]: string } = {
+    // World Cup 2026 teams
+    'mexico': 'mx',
+    'méxico': 'mx',
+    'south africa': 'za',
+    'áfrica do sul': 'za',
+    'south korea': 'kr',
+    'coréia do sul': 'kr',
+    'coreia do sul': 'kr',
+    'czechia': 'cz',
+    'república tcheca': 'cz',
+    'republica tcheca': 'cz',
+    'canada': 'ca',
+    'canadá': 'ca',
+    'bosnia-herzegovina': 'ba',
+    'bósnia e herzegovina': 'ba',
+    'bosnia and herzegovina': 'ba',
+    'united states': 'us',
+    'estados unidos': 'us',
+    'usa': 'us',
+    'paraguay': 'py',
+    'paraguai': 'py',
+    'brazil': 'br',
+    'brasil': 'br',
+    'argentina': 'ar',
+    'france': 'fr',
+    'frança': 'fr',
+    'germany': 'de',
+    'alemanha': 'de',
+    'spain': 'es',
+    'espanha': 'es',
+    'italy': 'it',
+    'itália': 'it',
+    'portugal': 'pt',
+    'england': 'gb',
+    'inglaterra': 'gb',
+    'belgium': 'be',
+    'bélgica': 'be',
+    'croatia': 'hr',
+    'croácia': 'hr',
+    'denmark': 'dk',
+    'dinamarca': 'dk',
+    'netherlands': 'nl',
+    'holanda': 'nl',
+    'países baixos': 'nl',
+    'paises baixos': 'nl',
+    'uruguay': 'uy',
+    'uruguaia': 'uy',
+    'uruguai': 'uy',
+    'colombia': 'co',
+    'colômbia': 'co',
+    'chile': 'cl',
+    'peru': 'pe',
+    'ecuador': 'ec',
+    'equador': 'ec',
+    'venezuela': 've',
+    'bolivia': 'bo',
+    'bolívia': 'bo',
+    'japan': 'jp',
+    'japão': 'jp',
+    'china': 'cn',
+    'australia': 'au',
+    'austrália': 'au',
+    'morocco': 'ma',
+    'marrocos': 'ma',
+    'senegal': 'sn',
+    'egypt': 'eg',
+    'egito': 'eg',
+    'nigeria': 'ng',
+    'nigéria': 'ng',
+    'cameroon': 'cm',
+    'camarões': 'cm',
+    'ghana': 'gh',
+    'gana': 'gh',
+    'switzerland': 'ch',
+    'suíça': 'ch',
+    'sweden': 'se',
+    'suécia': 'se',
+    'norway': 'no',
+    'noruega': 'no',
+    'poland': 'pl',
+    'polônia': 'pl',
+    'polonia': 'pl',
+    'ukraine': 'ua',
+    'ucrânia': 'ua',
+    'austria': 'at',
+    'áustria': 'at',
+    'turkey': 'tr',
+    'turquia': 'tr',
+    'saudi arabia': 'sa',
+    'arábia saudita': 'sa',
+    'costa rica': 'cr',
+    'honduras': 'hn',
+    'panama': 'pa',
+    'panamá': 'pa',
+    'jamaica': 'jm',
+    'algeria': 'dz',
+    'argélia': 'dz',
+    'tunisia': 'tn',
+    'tunísia': 'tn',
+    'ivory coast': 'ci',
+    'costa do marfim': 'ci',
+    'cape verde islands': 'cv',
+    'cape verde': 'cv',
+    'cabo verde': 'cv',
+    'congo dr': 'cd',
+    'dr congo': 'cd',
+    'congo': 'cd',
+    'república democrática do congo': 'cd',
+    'curaçao': 'cw',
+    'curacao': 'cw',
+    'haiti': 'ht',
+    'iran': 'ir',
+    'irã': 'ir',
+    'iraq': 'iq',
+    'iraque': 'iq',
+    'jordan': 'jo',
+    'jordânia': 'jo',
+    'new zealand': 'nz',
+    'nova zelândia': 'nz',
+    'qatar': 'qa',
+    'catar': 'qa',
+    'scotland': 'gb',
+    'escócia': 'gb',
+    'uzbekistan': 'uz',
+    'uzbequistão': 'uz',
+    
+    // Brasileirão Clubs (default to Brazil flag)
+    'flamengo': 'br',
+    'palmeiras': 'br',
+    'são paulo': 'br',
+    'sao paulo': 'br',
+    'corinthians': 'br',
+    'grêmio': 'br',
+    'gremio': 'br',
+    'internacional': 'br',
+    'fluminense': 'br',
+    'botafogo': 'br',
+    'vasco': 'br',
+    'cruzeiro': 'br',
+    'atlético-mg': 'br',
+    'atletico-mg': 'br',
+    'bahia': 'br',
+    'fortaleza': 'br',
+    'athletico-pr': 'br',
+    'cuiabá': 'br',
+    'cuiaba': 'br',
+    'red bull bragantino': 'br',
+    'bragantino': 'br',
+    'juventude': 'br',
+    'criciúma': 'br',
+    'criciuma': 'br',
+    'atlético-go': 'br',
+    'atletico-go': 'br',
+    'vitória': 'br',
+    'vitoria': 'br',
+
+    // Champions League clubs
+    'real madrid': 'es',
+    'barcelona': 'es',
+    'atlético madrid': 'es',
+    'atletico madrid': 'es',
+    'manchester city': 'gb',
+    'manchester united': 'gb',
+    'liverpool': 'gb',
+    'arsenal': 'gb',
+    'chelsea': 'gb',
+    'tottenham': 'gb',
+    'bayern munich': 'de',
+    'bayern de munique': 'de',
+    'borussia dortmund': 'de',
+    'bayer leverkusen': 'de',
+    'paris saint-germain': 'fr',
+    'psg': 'fr',
+    'marseille': 'fr',
+    'juventus': 'it',
+    'inter milan': 'it',
+    'ac milan': 'it',
+    'milan': 'it',
+    'napoli': 'it',
+    'roma': 'it',
+    'benfica': 'pt',
+    'porto': 'pt',
+    'sporting': 'pt',
+    'ajax': 'nl',
+    'psv': 'nl'
+  };
+  
+  const code = mapping[normalized];
+  return code ? `https://flagcdn.com/w40/${code}.png` : '';
+};
+
+const COMPETITION_EMOJIS: { [key: string]: string } = {
+  'WC': '🌎',
+  'CL': '🏆',
+  'BSA': '⚽',
+  'CLI': '🏆',
+  'PL': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+  'PD': '🇪🇸',
+  'BL1': '🇩🇪',
+  'SA': '🇮🇹',
+  'FL1': '🇫🇷',
+  'DED': '🇳🇱',
+  'PPL': '🇵🇹',
+  'ELC': '⚽',
+  'EC': '🏆'
+};
+
+const getCompetitionEmoji = (code: string): string => {
+  return COMPETITION_EMOJIS[code] || '⚽';
+};
 
 export default function Home() {
   // Authentication State
@@ -64,10 +283,36 @@ export default function Home() {
   const [rankingFilter, setRankingFilter] = useState<string>('GERAL');
   const [groupRanking, setGroupRanking] = useState<RankingUser[]>([]);
 
-  // First Login Registration States
-  const [registrationPendingUser, setRegistrationPendingUser] = useState<{ email: string; nome: string } | null>(null);
-  const [registrationCode, setRegistrationCode] = useState<string>('');
-  const [confirmingCode, setConfirmingCode] = useState<boolean>(false);
+  // Active Competitions States
+  const [activeCompetitions, setActiveCompetitions] = useState<{ id: number; name: string; code: string; emblem: string }[]>([]);
+  const [loadingActiveComps, setLoadingActiveComps] = useState<boolean>(true);
+
+  // 1. Listen for Supabase Authentication state changes
+  // Load active competitions on mount
+  useEffect(() => {
+    const fetchActiveCompetitions = async () => {
+      try {
+        setLoadingActiveComps(true);
+        const res = await getCompetitions();
+        const activeListStr = res.data.active || 'WC';
+        const activeCodes = activeListStr.split(',').map((c: string) => c.trim()).filter(Boolean);
+        const allComps = res.data.competitions || [];
+        const activeComps = allComps.filter((c: any) => activeCodes.includes(c.code));
+        
+        setActiveCompetitions(activeComps);
+        
+        // If 'WC' is not in the active codes, switch selectedCompetition to the first active one
+        if (activeCodes.length > 0 && !activeCodes.includes(selectedCompetition)) {
+          setSelectedCompetition(activeCodes[0]);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar competições ativas:', err);
+      } finally {
+        setLoadingActiveComps(false);
+      }
+    };
+    fetchActiveCompetitions();
+  }, []);
 
   // 1. Listen for Supabase Authentication state changes
   useEffect(() => {
@@ -87,38 +332,32 @@ export default function Home() {
           // Login or register user in backend
           const res = await loginUser({ email, nome });
           
-          if (res.status === 202 && (res.data as any).error === 'REGISTRATION_REQUIRED_CODE') {
-            setRegistrationPendingUser({ email, nome });
-            setLoggedUser(null);
-          } else {
-            setLoggedUser(res.data);
-            setRegistrationPendingUser(null);
-            
-            // Load their predictions
-            await loadUserBets(res.data.id, matches);
+          setLoggedUser(res.data);
+          
+          // Load their predictions
+          await loadUserBets(res.data.id, matches);
 
-            // Load group ranking if they are in a group
-            if (res.data.grupo) {
-              try {
-                const uGroups = res.data.grupo.split(',').map((g: string) => g.trim()).filter(Boolean);
-                const firstGroup = uGroups[0];
-                if (firstGroup) {
-                  setRankingFilter(firstGroup);
-                  const groupRankRes = await getGroupRanking(firstGroup, selectedCompetition);
-                  setGroupRanking(groupRankRes.data.ranking);
-                } else {
-                  setGroupRanking([]);
-                  setRankingFilter('GERAL');
-                }
-              } catch (err) {
-                console.error('Erro ao buscar ranking do grupo:', err);
+          // Load group ranking if they are in a group
+          if (res.data.grupo) {
+            try {
+              const uGroups = res.data.grupo.split(',').map((g: string) => g.trim()).filter(Boolean);
+              const firstGroup = uGroups[0];
+              if (firstGroup) {
+                setRankingFilter(firstGroup);
+                const groupRankRes = await getGroupRanking(firstGroup, selectedCompetition);
+                setGroupRanking(groupRankRes.data.ranking);
+              } else {
                 setGroupRanking([]);
                 setRankingFilter('GERAL');
               }
-            } else {
+            } catch (err) {
+              console.error('Erro ao buscar ranking do grupo:', err);
               setGroupRanking([]);
               setRankingFilter('GERAL');
             }
+          } else {
+            setGroupRanking([]);
+            setRankingFilter('GERAL');
           }
         } catch (error) {
           console.error('Erro ao processar login no backend:', error);
@@ -277,6 +516,7 @@ export default function Home() {
   };
 
   const handleScoreChange = (matchId: string, side: 'home' | 'away', value: string) => {
+    if (loggedUser && !loggedUser.grupo) return;
     setPredictions(prev => {
       const current = prev[matchId] || { palpite_casa: '', palpite_fora: '', resultado_radio: '', saved: false };
       
@@ -302,6 +542,7 @@ export default function Home() {
   };
 
   const handleOutcomeChange = (matchId: string, outcome: 'CASA' | 'EMPATE' | 'FORA') => {
+    if (loggedUser && !loggedUser.grupo) return;
     setPredictions(prev => {
       const current = prev[matchId] || { palpite_casa: '', palpite_fora: '', resultado_radio: '', saved: false };
       
@@ -319,6 +560,11 @@ export default function Home() {
   const submitPrediction = async (matchId: string) => {
     if (!loggedUser) {
       alert('Faça login com o Google para poder salvar palpites.');
+      return;
+    }
+
+    if (!loggedUser.grupo) {
+      alert('Você precisa entrar em um grupo para poder salvar palpites.');
       return;
     }
 
@@ -443,60 +689,11 @@ export default function Home() {
     }
   };
 
-  const handleRegistrationConfirmCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!registrationPendingUser || !registrationCode.trim()) return;
-    try {
-      setConfirmingCode(true);
-      const res = await loginUser({
-        email: registrationPendingUser.email,
-        nome: registrationPendingUser.nome,
-        code: registrationCode
-      });
-      
-      if (res.status === 201) {
-        setLoggedUser(res.data);
-        setRegistrationPendingUser(null);
-        setRegistrationCode('');
-        alert('Cadastro realizado com sucesso! Bem-vindo ao bolão.');
-        
-        // Load predictions
-        await loadUserBets(res.data.id, matches);
-        
-        // Load group rankings
-        if (res.data.grupo) {
-          const uGroups = res.data.grupo.split(',').map((g: string) => g.trim()).filter(Boolean);
-          const firstGroup = uGroups[0];
-          if (firstGroup) {
-            setRankingFilter(firstGroup);
-            const groupRankRes = await getGroupRanking(firstGroup, selectedCompetition);
-            setGroupRanking(groupRankRes.data.ranking);
-          }
-        }
-      } else {
-        alert((res.data as any).message || 'Código inválido.');
-      }
-    } catch (error: any) {
-      console.error('Erro ao confirmar código:', error);
-      alert(error.response?.data?.message || error.response?.data?.error || 'Código de grupo inválido ou inexistente.');
-    } finally {
-      setConfirmingCode(false);
-    }
-  };
-
-  const handleRegistrationCancel = async () => {
-    try {
-      await supabase.auth.signOut();
-      setRegistrationPendingUser(null);
-      setRegistrationCode('');
-    } catch (error) {
-      console.error('Erro ao cancelar registro:', error);
-    }
-  };
-
   const selectedUserStats = loggedUser 
     ? ranking.find(u => u.id === loggedUser.id) 
     : null;
+
+  const isGroupRequiredLocked = !!(loggedUser && !loggedUser.grupo);
 
   const userGroups = loggedUser?.grupo
     ? loggedUser.grupo.split(',').map(g => g.trim()).filter(Boolean)
@@ -508,65 +705,6 @@ export default function Home() {
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-4"></div>
         <p className="text-gray-400 font-semibold">Carregando Bolão...</p>
       </div>
-    );
-  }
-
-  // Se o usuário logou via Google, mas é novo e precisa do código do grupo
-  if (registrationPendingUser) {
-    return (
-      <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased flex flex-col items-center justify-center p-4">
-        <div className="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 shadow-2xl relative overflow-hidden">
-          {/* Background elements */}
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-600/20 rounded-full blur-3xl"></div>
-          
-          <div className="relative z-10 text-center">
-            <div className="mx-auto w-16 h-16 bg-blue-600/10 border border-blue-500/30 rounded-full flex items-center justify-center mb-6">
-              <Trophy size={32} className="text-blue-500" />
-            </div>
-            
-            <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Primeiro Acesso</h1>
-            <p className="text-sm text-gray-400 mb-6 font-medium">
-              Olá, <span className="text-white font-semibold">{registrationPendingUser.nome}</span>! Para participar do Bolão da Copa, você precisa inserir um código de grupo válido.
-            </p>
-            
-            <form onSubmit={handleRegistrationConfirmCode} className="space-y-4 text-left">
-              <div>
-                <label htmlFor="reg-code" className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Código do Grupo
-                </label>
-                <input
-                  type="text"
-                  id="reg-code"
-                  placeholder="Ex: GRUPO2026"
-                  value={registrationCode}
-                  onChange={(e) => setRegistrationCode(e.target.value)}
-                  className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
-                  disabled={confirmingCode}
-                />
-              </div>
-              
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleRegistrationCancel}
-                  disabled={confirmingCode}
-                  className="flex-1 py-2.5 bg-gray-850 hover:bg-gray-800 text-gray-300 font-bold rounded text-xs border border-gray-800 cursor-pointer transition-colors disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={confirmingCode || !registrationCode.trim()}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-xs border-0 cursor-pointer transition-colors disabled:opacity-50"
-                >
-                  {confirmingCode ? 'Confirmando...' : 'Confirmar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </main>
     );
   }
 
@@ -641,14 +779,32 @@ export default function Home() {
                     const matchDate = new Date(match.data);
                     return (
                       <div key={match.id} className="glass-card flex justify-between items-center gap-4 py-4 px-6 rounded-lg">
-                        <div className="flex-1 text-right font-bold text-sm text-gray-300">{match.time_casa}</div>
-                        <div className="flex flex-col items-center gap-1">
+                        <div className="flex-1 flex items-center justify-end gap-2 font-bold text-sm text-gray-300 truncate">
+                          <span>{match.time_casa}</span>
+                          {getFlagUrl(match.time_casa) && (
+                            <img 
+                              src={getFlagUrl(match.time_casa)} 
+                              alt="" 
+                              className="w-5 h-3.5 object-cover rounded-sm border border-gray-850 shrink-0" 
+                            />
+                          )}
+                        </div>
+                        <div className="flex flex-col items-center gap-1 shrink-0">
                           <span className="text-xs font-bold text-indigo-400">vs</span>
                           <span className="text-[10px] text-gray-500 font-semibold bg-gray-950 px-2 py-0.5 border border-gray-800 rounded">
                             {matchDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} {matchDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <div className="flex-1 text-left font-bold text-sm text-gray-300">{match.time_fora}</div>
+                        <div className="flex-1 flex items-center justify-start gap-2 font-bold text-sm text-gray-300 truncate">
+                          {getFlagUrl(match.time_fora) && (
+                            <img 
+                              src={getFlagUrl(match.time_fora)} 
+                              alt="" 
+                              className="w-5 h-3.5 object-cover rounded-sm border border-gray-850 shrink-0" 
+                            />
+                          )}
+                          <span>{match.time_fora}</span>
+                        </div>
                       </div>
                     );
                   })}
@@ -833,39 +989,26 @@ export default function Home() {
 
               {/* Event Tabs Switcher */}
               <div className="flex items-center gap-1.5 bg-[#161616]/60 p-1 border border-white/5 rounded-lg backdrop-blur-md self-start">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCompetition('WC')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded transition-all cursor-pointer border-0 ${
-                    selectedCompetition === 'WC' 
-                      ? 'bg-blue-600 text-white shadow' 
-                      : 'text-gray-400 hover:text-gray-200 bg-transparent'
-                  }`}
-                >
-                  🌎 Copa do Mundo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCompetition('CL')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded transition-all cursor-pointer border-0 ${
-                    selectedCompetition === 'CL' 
-                      ? 'bg-blue-600 text-white shadow' 
-                      : 'text-gray-400 hover:text-gray-200 bg-transparent'
-                  }`}
-                >
-                  🏆 Champions
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCompetition('BSA')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded transition-all cursor-pointer border-0 ${
-                    selectedCompetition === 'BSA' 
-                      ? 'bg-blue-600 text-white shadow' 
-                      : 'text-gray-400 hover:text-gray-200 bg-transparent'
-                  }`}
-                >
-                  ⚽ Brasileirão
-                </button>
+                {loadingActiveComps ? (
+                  <span className="text-[10px] text-gray-500 font-semibold px-3 py-1.5">Carregando campeonatos...</span>
+                ) : activeCompetitions.length === 0 ? (
+                  <span className="text-[10px] text-red-400 font-bold px-3 py-1.5">Nenhum campeonato ativo</span>
+                ) : (
+                  activeCompetitions.map(comp => (
+                    <button
+                      key={comp.code}
+                      type="button"
+                      onClick={() => setSelectedCompetition(comp.code)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded transition-all cursor-pointer border-0 ${
+                        selectedCompetition === comp.code 
+                          ? 'bg-blue-600 text-white shadow' 
+                          : 'text-gray-400 hover:text-gray-200 bg-transparent'
+                      }`}
+                    >
+                      {getCompetitionEmoji(comp.code)} {comp.name.replace('UEFA ', '').replace('FIFA ', '')}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
@@ -972,6 +1115,18 @@ export default function Home() {
                   <Events size={20} className="text-indigo-400" /> Palpites Disponíveis
                 </h2>
 
+                {isGroupRequiredLocked && (
+                  <div className="bg-orange-950/20 border border-orange-500/30 p-4 rounded-lg flex gap-3 items-start shadow-lg">
+                    <WarningFilled size={20} className="text-orange-400 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-white mb-1 uppercase tracking-wider">Atenção: Grupo Necessário</h4>
+                      <p className="text-xs text-gray-400 font-medium leading-relaxed">
+                        Para começar a dar palpites e participar dos rankings, você precisa entrar em um grupo inserindo o código de convite no menu lateral.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {matches.length === 0 ? (
                   <div className="glass-panel border-gray-900 p-12 text-center text-gray-500 rounded-lg">
                     <p className="text-lg font-semibold mb-2 text-gray-400">Nenhum jogo disponível para palpitar</p>
@@ -995,9 +1150,27 @@ export default function Home() {
                             </div>
                             
                             <div className="flex items-center justify-between gap-4">
-                              <div className="flex-1 text-right font-bold text-sm text-gray-100 truncate">{match.time_casa}</div>
-                              <span className="text-[10px] text-gray-500 font-bold bg-gray-950 px-2 py-0.5 border border-gray-800 rounded">VS</span>
-                              <div className="flex-1 text-left font-bold text-sm text-gray-100 truncate">{match.time_fora}</div>
+                              <div className="flex-1 flex items-center justify-end gap-2 font-bold text-sm text-gray-100 truncate">
+                                <span>{match.time_casa}</span>
+                                {getFlagUrl(match.time_casa) && (
+                                  <img 
+                                    src={getFlagUrl(match.time_casa)} 
+                                    alt="" 
+                                    className="w-5 h-3.5 object-cover rounded-sm border border-gray-850 shrink-0" 
+                                  />
+                                )}
+                              </div>
+                              <span className="text-[10px] text-gray-500 font-bold bg-gray-950 px-2 py-0.5 border border-gray-800 rounded shrink-0">VS</span>
+                              <div className="flex-1 flex items-center justify-start gap-2 font-bold text-sm text-gray-100 truncate">
+                                {getFlagUrl(match.time_fora) && (
+                                  <img 
+                                    src={getFlagUrl(match.time_fora)} 
+                                    alt="" 
+                                    className="w-5 h-3.5 object-cover rounded-sm border border-gray-850 shrink-0" 
+                                  />
+                                )}
+                                <span>{match.time_fora}</span>
+                              </div>
                             </div>
                           </div>
 
@@ -1008,7 +1181,8 @@ export default function Home() {
                               min="0"
                               value={pred.palpite_casa}
                               onChange={(e) => handleScoreChange(match.id, 'home', e.target.value)}
-                              className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              disabled={isGroupRequiredLocked}
+                              className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                               placeholder="0"
                             />
                             <span className="text-gray-600 font-bold">x</span>
@@ -1017,7 +1191,8 @@ export default function Home() {
                               min="0"
                               value={pred.palpite_fora}
                               onChange={(e) => handleScoreChange(match.id, 'away', e.target.value)}
-                              className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              disabled={isGroupRequiredLocked}
+                              className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                               placeholder="0"
                             />
                           </div>
@@ -1027,33 +1202,36 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => handleOutcomeChange(match.id, 'CASA')}
+                              disabled={isGroupRequiredLocked}
                               className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${
                                 pred.resultado_radio === 'CASA'
                                   ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
                                   : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
-                              }`}
+                              } disabled:opacity-30 disabled:cursor-not-allowed`}
                             >
                               Casa
                             </button>
                             <button
                               type="button"
                               onClick={() => handleOutcomeChange(match.id, 'EMPATE')}
+                              disabled={isGroupRequiredLocked}
                               className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${
                                 pred.resultado_radio === 'EMPATE'
                                   ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
                                   : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
-                              }`}
+                              } disabled:opacity-30 disabled:cursor-not-allowed`}
                             >
                               Empate
                             </button>
                             <button
                               type="button"
                               onClick={() => handleOutcomeChange(match.id, 'FORA')}
+                              disabled={isGroupRequiredLocked}
                               className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${
                                 pred.resultado_radio === 'FORA'
                                   ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
                                   : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
-                              }`}
+                              } disabled:opacity-30 disabled:cursor-not-allowed`}
                             >
                               Fora
                             </button>
@@ -1063,8 +1241,8 @@ export default function Home() {
                           <div className="flex flex-col items-end gap-1 shrink-0 w-full md:w-auto">
                             <button
                               onClick={() => submitPrediction(match.id)}
-                              disabled={savingBetId === match.id}
-                              className={`w-full md:w-auto px-4 py-2 font-bold text-xs rounded border-0 text-white cursor-pointer transition-colors disabled:opacity-50 ${
+                              disabled={savingBetId === match.id || isGroupRequiredLocked}
+                              className={`w-full md:w-auto px-4 py-2 font-bold text-xs rounded border-0 text-white cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                 pred.saved 
                                   ? 'bg-emerald-600 hover:bg-emerald-700' 
                                   : 'bg-blue-600 hover:bg-blue-700'

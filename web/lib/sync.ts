@@ -17,17 +17,9 @@ interface ApiMatch {
 }
 
 /**
- * Busca partidas da Copa do Mundo da API Football-Data.org
+ * Busca partidas de uma competição específica da API Football-Data.org
  */
-export async function fetchMatchesFromApi(apiKey: string): Promise<ApiMatch[]> {
-  // Load active competition from config (defaults to 'WC')
-  const { data: configData } = await supabase
-    .from('config')
-    .select('value')
-    .eq('key', 'active_competition')
-    .maybeSingle();
-  
-  const compCode = configData?.value || 'WC';
+export async function fetchMatchesFromApi(apiKey: string, compCode: string): Promise<ApiMatch[]> {
   const url = `https://api.football-data.org/v4/competitions/${compCode}/matches`;
   
   try {
@@ -37,8 +29,8 @@ export async function fetchMatchesFromApi(apiKey: string): Promise<ApiMatch[]> {
     });
     return response.data.matches || [];
   } catch (error: any) {
-    console.error('Erro ao consultar API de futebol:', error.message);
-    throw new Error(`Falha ao obter jogos da API: ${error.message}`);
+    console.error(`Erro ao consultar API de futebol para ${compCode}:`, error.message);
+    throw new Error(`Falha ao obter jogos da API para ${compCode}: ${error.message}`);
   }
 }
 
@@ -72,55 +64,64 @@ export async function syncMatches(apiKey: string): Promise<number> {
     .eq('key', 'active_competition')
     .maybeSingle();
   
-  const compCode = configData?.value || 'WC';
-  const apiMatches = await fetchMatchesFromApi(apiKey);
-  let updatedCount = 0;
+  const activeValue = configData?.value || 'WC';
+  const compCodes = activeValue.split(',').map((c: string) => c.trim()).filter((c: string) => c.length > 0);
+  
+  let totalUpdatedCount = 0;
 
-  for (const apiMatch of apiMatches) {
-    const status = mapStatus(apiMatch.status);
-    const homeScore = apiMatch.score?.fullTime?.home ?? null;
-    const awayScore = apiMatch.score?.fullTime?.away ?? null;
+  for (const compCode of compCodes) {
+    try {
+      const apiMatches = await fetchMatchesFromApi(apiKey, compCode);
+      for (const apiMatch of apiMatches) {
+        const status = mapStatus(apiMatch.status);
+        const homeScore = apiMatch.score?.fullTime?.home ?? null;
+        const awayScore = apiMatch.score?.fullTime?.away ?? null;
 
-    // Verifica se jogo já existe
-    const { data: existing } = await supabase
-      .from('matches')
-      .select('id')
-      .eq('id_api', apiMatch.id)
-      .maybeSingle();
+        // Verifica se jogo já existe
+        const { data: existing } = await supabase
+          .from('matches')
+          .select('id')
+          .eq('id_api', apiMatch.id)
+          .maybeSingle();
 
-    const matchData = {
-      id_api: apiMatch.id,
-      time_casa: apiMatch.homeTeam?.name || 'A confirmar',
-      time_fora: apiMatch.awayTeam?.name || 'A confirmar',
-      data: apiMatch.utcDate,
-      placar_casa: homeScore,
-      placar_fora: awayScore,
-      status: status,
-      competition: compCode,
-      updated_at: new Date().toISOString()
-    };
+        const matchData = {
+          id_api: apiMatch.id,
+          time_casa: apiMatch.homeTeam?.name || 'A confirmar',
+          time_fora: apiMatch.awayTeam?.name || 'A confirmar',
+          data: apiMatch.utcDate,
+          placar_casa: homeScore,
+          placar_fora: awayScore,
+          status: status,
+          competition: compCode,
+          updated_at: new Date().toISOString()
+        };
 
-    if (existing) {
-      const { error } = await supabase
-        .from('matches')
-        .update(matchData)
-        .eq('id', existing.id);
-      
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from('matches')
-        .insert({
-          ...matchData,
-          created_at: new Date().toISOString()
-        });
+        if (existing) {
+          const { error } = await supabase
+            .from('matches')
+            .update(matchData)
+            .eq('id', existing.id);
+          
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('matches')
+            .insert({
+              ...matchData,
+              created_at: new Date().toISOString()
+            });
 
-      if (error) throw error;
+          if (error) throw error;
+        }
+        totalUpdatedCount++;
+      }
+    } catch (err: any) {
+      console.error(`Erro ao sincronizar jogos para a competição ${compCode}:`, err.message);
+      throw new Error(`Falha na competição ${compCode}: ${err.message}`);
     }
-    updatedCount++;
   }
 
-  return updatedCount;
+  return totalUpdatedCount;
 }
 
 /**
