@@ -322,9 +322,16 @@ export default function AdminPage() {
 
     try {
       await apiDeleteUser(userId);
+      alert('Usuário excluído com sucesso!');
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao deletar usuário:', error);
+      if (error.response?.status === 404) {
+        alert('Este usuário já foi excluído do sistema.');
+      } else {
+        alert('Não foi possível excluir o usuário.');
+      }
+      loadUsers();
     }
   };
 

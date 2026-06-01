@@ -70,7 +70,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = params;
+    console.log('--- DELETE USER API ---');
+    console.log('Received ID:', id);
+    console.log('Params object:', params);
 
+    // 1. Delete user bets manually first to guarantee clean cascade
+    await supabase
+      .from('bets')
+      .delete()
+      .eq('usuario_id', id);
+
+    // 2. Delete the user record
     const { data, error } = await supabase
       .from('users')
       .delete()
