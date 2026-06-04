@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS matches (
     placar_fora INTEGER,
     status VARCHAR(20) DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED', 'FINISHED', 'LIVE', 'POSTPONED')),
     is_last_match BOOLEAN DEFAULT false,
+    decidido_por VARCHAR(20) DEFAULT 'REGULAR',
+    vencedor_final VARCHAR(10),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

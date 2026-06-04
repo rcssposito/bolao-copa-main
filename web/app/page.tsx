@@ -1418,10 +1418,13 @@ export default function Home() {
                     <div className="grid grid-cols-2 gap-1">
                       <div>🎯 Placar exato: <span className="text-blue-400 font-bold">7 pts</span></div>
                       <div>⚽ Vencedor correto: <span className="text-blue-400 font-bold">5 pts</span></div>
-                      <div>🤝 Empate correto: <span className="text-blue-400 font-bold">3 pts</span></div>
+                      <div>🤝 Empate correto: <span className="text-blue-400 font-bold">5 pts</span></div>
                       <div>❌ Outros placares: <span className="text-blue-400 font-bold">0 pts</span></div>
                     </div>
                     <p className="text-[9px] leading-relaxed mt-2 text-gray-600">
+                      * Em caso de prorrogação ou pênaltis, vale quem acertou o vencedor final (5 pts).
+                    </p>
+                    <p className="text-[9px] leading-relaxed text-gray-600">
                       * Desempate (Des): Quanto menor o número, mais próximo o palpite do placar real da partida final da Copa.
                     </p>
                   </div>

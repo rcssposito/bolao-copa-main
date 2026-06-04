@@ -8,6 +8,8 @@ interface ApiMatch {
   homeTeam: { name: string };
   awayTeam: { name: string };
   score: {
+    winner: 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW' | null;
+    duration: 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT';
     fullTime: {
       home: number | null;
       away: number | null;
@@ -93,6 +95,14 @@ export async function syncMatches(apiKey: string): Promise<number> {
           placar_fora: awayScore,
           status: status,
           competition: compCode,
+          decidido_por: apiMatch.score?.duration || 'REGULAR',
+          vencedor_final: apiMatch.score?.winner === 'HOME_TEAM' 
+            ? 'CASA' 
+            : apiMatch.score?.winner === 'AWAY_TEAM' 
+              ? 'FORA' 
+              : apiMatch.score?.winner === 'DRAW' 
+                ? 'EMPATE' 
+                : null,
           updated_at: new Date().toISOString()
         };
 
@@ -154,7 +164,9 @@ export async function calculateAllBets(): Promise<number> {
         bet.palpite_casa,
         bet.palpite_fora,
         match.placar_casa,
-        match.placar_fora
+        match.placar_fora,
+        match.decidido_por,
+        match.vencedor_final
       );
 
       const { error: updateError } = await supabase
