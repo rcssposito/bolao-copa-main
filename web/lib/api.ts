@@ -48,6 +48,30 @@ export interface Bet {
   created_at: string
 }
 
+export interface AdminBet {
+  id: string
+  palpite_casa: number
+  palpite_fora: number
+  resultado_radio: 'CASA' | 'EMPATE' | 'FORA'
+  pontos: number
+  created_at: string
+  users: {
+    id: string
+    nome: string
+    email: string
+    grupo: string | null
+  } | null
+  matches: {
+    id: string
+    time_casa: string
+    time_fora: string
+    data: string
+    status: 'SCHEDULED' | 'FINISHED' | 'LIVE' | 'POSTPONED'
+    placar_casa: number | null
+    placar_fora: number | null
+  } | null
+}
+
 export interface RankingUser extends User {
   posicao: number
   diferenca_ultimo_jogo: number | null
@@ -112,6 +136,7 @@ export const triggerSync = () => api.post('/admin/sync')
 export const getStats = () => api.get('/admin/stats')
 export const getCompetitions = () => api.get<{ active: string; competitions: any[] }>('/admin/competitions')
 export const updateActiveCompetition = (code: string) => api.post('/admin/competitions', { code })
+export const getAllBets = () => api.get<AdminBet[]>('/admin/bets')
 
 // Tags
 export interface TagItem {

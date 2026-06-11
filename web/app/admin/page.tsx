@@ -396,15 +396,23 @@ export default function AdminPage() {
                 Gerencie usuários, e-mails de acesso, grupos e pagamentos
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleManualSync}
-              disabled={syncing}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-xs border-0 cursor-pointer disabled:opacity-50 transition-colors"
-            >
-              <Renew size={16} className={syncing ? "animate-spin" : ""} />
-              {syncing ? 'Sincronizando...' : 'Sincronizar Resultados da FIFA'}
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/admin/bets"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-xs border-0 cursor-pointer transition-colors no-underline"
+              >
+                📝 Ver Apostas Realizadas
+              </Link>
+              <button
+                type="button"
+                onClick={handleManualSync}
+                disabled={syncing}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#161616] border border-gray-800 hover:bg-[#262626] text-white font-bold rounded text-xs cursor-pointer disabled:opacity-50 transition-colors"
+              >
+                <Renew size={16} className={syncing ? "animate-spin" : ""} />
+                {syncing ? 'Sincronizando...' : 'Sincronizar Resultados da FIFA'}
+              </button>
+            </div>
           </div>
 
           {/* Active Competition Settings */}
