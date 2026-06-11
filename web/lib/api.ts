@@ -33,6 +33,7 @@ export interface Match {
   placar_fora: number | null
   status: 'SCHEDULED' | 'FINISHED' | 'LIVE' | 'POSTPONED'
   is_last_match: boolean
+  stage?: string
   created_at: string
   updated_at: string
 }
@@ -105,6 +106,7 @@ export const updateMatch = (id: string, data: {
   placar_fora?: number | null;
   status?: 'SCHEDULED' | 'FINISHED' | 'LIVE' | 'POSTPONED';
   is_last_match?: boolean;
+  stage?: string;
   decidido_por?: 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT';
   vencedor_final?: 'CASA' | 'FORA' | 'EMPATE' | null;
 }) => api.put<Match>(`/matches/${id}`, data)

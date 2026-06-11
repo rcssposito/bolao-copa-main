@@ -16,6 +16,7 @@ interface ApiMatch {
     }
   };
   status: string;
+  stage?: string;
 }
 
 /**
@@ -95,6 +96,7 @@ export async function syncMatches(apiKey: string): Promise<number> {
           placar_fora: awayScore,
           status: status,
           competition: compCode,
+          stage: apiMatch.stage || 'GROUP_STAGE',
           decidido_por: apiMatch.score?.duration || 'REGULAR',
           vencedor_final: apiMatch.score?.winner === 'HOME_TEAM' 
             ? 'CASA' 

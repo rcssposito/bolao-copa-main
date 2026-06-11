@@ -890,7 +890,16 @@ export default function Home() {
     <main className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans antialiased flex flex-col">
       {/* Navigation Header */}
       <header className="h-12 w-full bg-[#161616]/80 backdrop-blur-md border-b border-gray-900 fixed top-0 left-0 z-40 flex items-center px-4 justify-between">
-        <span className="font-bold text-white tracking-tight">Bolão Copa 2026</span>
+        <div className="flex items-center gap-4">
+          <span className="font-bold text-white tracking-tight">Bolão Copa 2026</span>
+          <Link
+            href="/bracket"
+            className="flex items-center gap-1.5 text-[10px] sm:text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all font-bold px-2 py-1 bg-amber-500/5 border border-amber-500/20 rounded no-underline"
+          >
+            <Trophy size={14} className="text-amber-400" />
+            <span>Chave do Mata-Mata</span>
+          </Link>
+        </div>
         
         {/* User profile action badge */}
         <div className="flex items-center gap-3">
@@ -932,6 +941,14 @@ export default function Home() {
                   <HomeIcon size={18} className="text-blue-500" />
                   Dashboard
                 </a>
+
+                <Link
+                  href="/bracket"
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left no-underline"
+                >
+                  <Trophy size={18} className="text-amber-500" />
+                  Chave do Mata-Mata
+                </Link>
                 
                 <a
                   href="#palpites-disponiveis"

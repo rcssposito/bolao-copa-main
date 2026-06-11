@@ -38,7 +38,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = params;
     const body = await request.json();
-    const { placar_casa, placar_fora, status, is_last_match, decidido_por, vencedor_final } = body;
+    const { placar_casa, placar_fora, status, is_last_match, decidido_por, vencedor_final, stage } = body;
 
     const updateData: any = {};
     
@@ -54,6 +54,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (is_last_match !== undefined) updateData.is_last_match = is_last_match;
     if (decidido_por !== undefined) updateData.decidido_por = decidido_por;
     if (vencedor_final !== undefined) updateData.vencedor_final = vencedor_final;
+    if (stage !== undefined) updateData.stage = stage;
 
     // Auto-calculate winner for regular time decisions
     const decPor = decidido_por || 'REGULAR';
