@@ -1217,7 +1217,7 @@ export default function Home() {
                           </div>
 
                           {/* Prediction Inputs (2 cols) */}
-                          <div className="md:col-span-2 flex justify-center w-full">
+                          <div className="md:col-span-2 flex flex-col items-center justify-center w-full">
                             <div className="flex items-center gap-3 bg-gray-950/60 p-2 rounded-lg border border-gray-800/80 w-fit">
                               <input
                                 type="number"
@@ -1239,6 +1239,15 @@ export default function Home() {
                                 placeholder="0"
                               />
                             </div>
+                            {match.placar_casa !== null && match.placar_fora !== null && (
+                              <div className={`mt-1.5 text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${
+                                match.status === 'FINISHED'
+                                  ? 'text-emerald-400 bg-emerald-950/30 border-emerald-500/20'
+                                  : 'text-red-400 bg-red-950/30 border-red-500/20 animate-pulse'
+                              }`}>
+                                {match.status === 'FINISHED' ? 'Placar: ' : 'Ao Vivo: '} {match.placar_casa} x {match.placar_fora}
+                              </div>
+                            )}
                           </div>
 
                           {/* Outcome indicator — read-only, computed from scores (3 cols) */}

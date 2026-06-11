@@ -100,6 +100,14 @@ export const getUpcomingMatches = (competition?: string) =>
   api.get<Match[]>('/matches/upcoming', { params: competition ? { competition } : {} })
 export const getFinishedMatches = () => api.get<Match[]>('/matches/finished')
 export const getMatch = (id: string) => api.get<Match>(`/matches/${id}`)
+export const updateMatch = (id: string, data: {
+  placar_casa?: number | null;
+  placar_fora?: number | null;
+  status?: 'SCHEDULED' | 'FINISHED' | 'LIVE' | 'POSTPONED';
+  is_last_match?: boolean;
+  decidido_por?: 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT';
+  vencedor_final?: 'CASA' | 'FORA' | 'EMPATE' | null;
+}) => api.put<Match>(`/matches/${id}`, data)
 
 // Bets
 export const createBet = (data: {

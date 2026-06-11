@@ -398,6 +398,12 @@ export default function AdminPage() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
+                href="/admin/matches"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-xs border-0 cursor-pointer transition-colors no-underline animate-pulse"
+              >
+                🏆 Gerenciar Resultados
+              </Link>
+              <Link
                 href="/admin/bets"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-xs border-0 cursor-pointer transition-colors no-underline"
               >
