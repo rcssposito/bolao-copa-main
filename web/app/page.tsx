@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { 
@@ -256,9 +256,12 @@ export default function Home() {
   // Authentication State
   const [loggedUser, setLoggedUser] = useState<User | null>(null);
   
+  // Ref to store auto-save timeouts for each matchId
+  const autoSaveTimeouts = useRef<Record<string, any>>({});
+  
   // App Data State
   const [ranking, setRanking] = useState<RankingUser[]>([]);
-  const [totalPot, setTotalPot] = useState({ valor_por_usuario: 50, usuarios_pagantes: 0, total_pote: 0 });
+  const [totalPot, setTotalPot] = useState({ valor_por_usuario: 50, usuarios_pagantes: 0, usuarios_totais: 0, total_pote: 0 });
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
@@ -543,6 +546,11 @@ export default function Home() {
 
   const handleScoreChange = (matchId: string, side: 'home' | 'away', value: string) => {
     if (loggedUser && !loggedUser.grupo) return;
+    
+    if (autoSaveTimeouts.current[matchId]) {
+      clearTimeout(autoSaveTimeouts.current[matchId]);
+    }
+
     setPredictions(prev => {
       const current = prev[matchId] || { palpite_casa: '', palpite_fora: '', resultado_radio: '', saved: false };
       
@@ -554,7 +562,7 @@ export default function Home() {
 
       const calculatedOutcome = getOutcomeFromScores(home, away);
 
-      return {
+      const updated = {
         ...prev,
         [matchId]: {
           ...current,
@@ -564,15 +572,28 @@ export default function Home() {
           saved: false
         }
       };
+
+      if (home !== '' && away !== '' && calculatedOutcome) {
+        autoSaveTimeouts.current[matchId] = setTimeout(() => {
+          submitPredictionSilent(matchId, home, away, calculatedOutcome);
+        }, 1000);
+      }
+
+      return updated;
     });
   };
 
   const handleOutcomeChange = (matchId: string, outcome: 'CASA' | 'EMPATE' | 'FORA') => {
     if (loggedUser && !loggedUser.grupo) return;
+    
+    if (autoSaveTimeouts.current[matchId]) {
+      clearTimeout(autoSaveTimeouts.current[matchId]);
+    }
+
     setPredictions(prev => {
       const current = prev[matchId] || { palpite_casa: '', palpite_fora: '', resultado_radio: '', saved: false };
       
-      return {
+      const updated = {
         ...prev,
         [matchId]: {
           ...current,
@@ -580,7 +601,68 @@ export default function Home() {
           saved: false
         }
       };
+
+      if (current.palpite_casa !== '' && current.palpite_fora !== '') {
+        autoSaveTimeouts.current[matchId] = setTimeout(() => {
+          submitPredictionSilent(matchId, current.palpite_casa, current.palpite_fora, outcome);
+        }, 1000);
+      }
+
+      return updated;
     });
+  };
+
+  const submitPredictionSilent = async (matchId: string, home: string | number, away: string | number, outcome: 'CASA' | 'EMPATE' | 'FORA') => {
+    if (!loggedUser || !loggedUser.grupo) return;
+
+    try {
+      setSavingBetId(matchId);
+      await createBet({
+        usuario_id: loggedUser.id,
+        jogo_id: matchId,
+        palpite_casa: parseInt(home.toString(), 10),
+        palpite_fora: parseInt(away.toString(), 10),
+        resultado_radio: outcome
+      });
+
+      setPredictions(prev => ({
+        ...prev,
+        [matchId]: {
+          ...prev[matchId],
+          palpite_casa: home,
+          palpite_fora: away,
+          resultado_radio: outcome,
+          saved: true
+        }
+      }));
+
+      // Refresh ranking list silently in the background
+      getRanking(selectedCompetition).then(res => {
+        setRanking(res.data.ranking);
+      }).catch(err => console.error(err));
+
+      if (rankingFilter !== 'GERAL') {
+        getGroupRanking(rankingFilter, selectedCompetition).then(res => {
+          setGroupRanking(res.data.ranking);
+        }).catch(err => console.error(err));
+      }
+
+    } catch (error: any) {
+      console.error('Erro ao auto-salvar palpite:', error);
+    } finally {
+      setSavingBetId(null);
+    }
+  };
+
+  const triggerImmediateSave = (matchId: string) => {
+    const pred = predictions[matchId];
+    if (!pred) return;
+    if (pred.palpite_casa !== '' && pred.palpite_fora !== '' && pred.resultado_radio && !pred.saved) {
+      if (autoSaveTimeouts.current[matchId]) {
+        clearTimeout(autoSaveTimeouts.current[matchId]);
+      }
+      submitPredictionSilent(matchId, pred.palpite_casa, pred.palpite_fora, pred.resultado_radio);
+    }
   };
 
   const submitPrediction = async (matchId: string) => {
@@ -893,8 +975,15 @@ export default function Home() {
         <div className="flex items-center gap-4">
           <span className="font-bold text-white tracking-tight">Bolão Copa 2026</span>
           <Link
+            href="/results"
+            className="flex items-center gap-1.5 text-[10px] sm:text-xs text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all font-bold px-2.5 py-1 bg-indigo-500/5 border border-indigo-500/20 rounded no-underline"
+          >
+            <Events size={14} className="text-indigo-400" />
+            <span>Resultados</span>
+          </Link>
+          <Link
             href="/bracket"
-            className="flex items-center gap-1.5 text-[10px] sm:text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all font-bold px-2 py-1 bg-amber-500/5 border border-amber-500/20 rounded no-underline"
+            className="flex items-center gap-1.5 text-[10px] sm:text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all font-bold px-2.5 py-1 bg-amber-500/5 border border-amber-500/20 rounded no-underline"
           >
             <Trophy size={14} className="text-amber-400" />
             <span>Chave do Mata-Mata</span>
@@ -906,19 +995,12 @@ export default function Home() {
           {loggedUser.is_admin && (
             <Link 
               href="/admin" 
-              className="text-gray-400 hover:text-white p-1.5 transition-colors flex items-center bg-transparent border-0 cursor-pointer mr-1"
+              className="text-gray-400 hover:text-white p-1.5 transition-colors flex items-center bg-transparent border-0 cursor-pointer"
               title="Painel Admin"
             >
               <Settings size={20} />
             </Link>
           )}
-          <div className="flex flex-col text-right">
-            <span className="text-[9px] text-blue-400 uppercase font-black tracking-wider leading-none">Conectado como</span>
-            <span className="text-xs font-bold text-white mt-1">{loggedUser.nome}</span>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-sm text-blue-400">
-            {loggedUser.nome.slice(0,2).toUpperCase()}
-          </div>
         </div>
       </header>
 
@@ -941,6 +1023,14 @@ export default function Home() {
                   <HomeIcon size={18} className="text-blue-500" />
                   Dashboard
                 </a>
+
+                <Link
+                  href="/results"
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-semibold rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left no-underline"
+                >
+                  <Events size={18} className="text-indigo-400" />
+                  Resultados das Partidas
+                </Link>
 
                 <Link
                   href="/bracket"
@@ -1030,7 +1120,7 @@ export default function Home() {
             <div className="flex flex-col gap-4 mb-8 border-b border-gray-900 pb-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight leading-none">Dashboard</h1>
+                  <h1 className="text-2xl font-black text-white tracking-tight leading-none">Olá, {loggedUser.nome}!</h1>
                   <p className="text-xs text-gray-500 mt-1.5 font-medium">Bem-vindo de volta ao Bolão.</p>
                 </div>
               </div>
@@ -1061,21 +1151,24 @@ export default function Home() {
             </div>
 
             {/* Status Dashboard Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 md:gap-6 mb-10">
               {/* Pote Total Card */}
-              <div className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-emerald-400 font-bold mb-1">
-                    💰 {rankingFilter === 'GERAL' ? 'Pote Total Geral' : `Pote · ${rankingFilter}`}
+              <div className="glass-card rounded-lg p-3 md:p-6 flex flex-col justify-center items-center text-center md:items-start md:text-left aspect-square md:aspect-auto transition-all duration-300">
+                <div className="flex flex-col items-center text-center md:items-start md:text-left">
+                  <div className="text-[9px] md:text-xs uppercase tracking-wider text-emerald-400 font-bold mb-1 truncate">
+                    💰 Pote <span className="hidden md:inline">{rankingFilter === 'GERAL' ? 'Total Geral' : ` · ${rankingFilter}`}</span>
                   </div>
-                  <div className="text-3xl font-extrabold text-white mt-1">
-                    R$ {totalPot.total_pote.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div className="text-base sm:text-lg md:text-3xl font-black text-white mt-1 break-all truncate">
+                    R$ {Math.round(totalPot.total_pote)}
                   </div>
                 </div>
-                <div className="mt-4 space-y-1">
+                <div className="md:hidden mt-2 text-[9px] text-gray-500 font-semibold">
+                  {totalPot.usuarios_pagantes}/{totalPot.usuarios_totais} pagaram
+                </div>
+                <div className="hidden md:block mt-4 space-y-1">
                   <div className="text-xs text-gray-400 flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    {totalPot.usuarios_pagantes} pagantes · R$ {(totalPot.valor_por_usuario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/entrada
+                    {totalPot.usuarios_pagantes} de {totalPot.usuarios_totais} pagaram · R$ {(totalPot.valor_por_usuario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/entrada
                   </div>
                   <div className={`text-xs font-semibold ${loggedUser.pagou ? 'text-emerald-400' : 'text-red-400'}`}>
                     {loggedUser.pagou ? '✓ Você pagou' : '✗ Seu pagamento está pendente'}
@@ -1083,29 +1176,34 @@ export default function Home() {
                 </div>
               </div>
 
-
               {/* Jogos Disponíveis Card */}
-              <div className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-indigo-400 font-bold mb-1">⚽ Jogos Disponíveis</div>
-                  <div className="text-3xl font-extrabold text-white mt-1">
+              <div className="glass-card rounded-lg p-3 md:p-6 flex flex-col justify-center items-center text-center md:items-start md:text-left aspect-square md:aspect-auto transition-all duration-300">
+                <div className="flex flex-col items-center text-center md:items-start md:text-left">
+                  <div className="text-[9px] md:text-xs uppercase tracking-wider text-indigo-400 font-bold mb-1 truncate">⚽ Jogos <span className="hidden md:inline">Disponíveis</span></div>
+                  <div className="text-base sm:text-lg md:text-3xl font-black text-white mt-1">
                     {matches.length}
                   </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-4">
+                <div className="md:hidden mt-2 text-[9px] text-gray-550 font-semibold">
+                  Disponíveis
+                </div>
+                <div className="hidden md:block text-xs text-gray-400 mt-4">
                   Partidas prontas para palpitar
                 </div>
               </div>
 
               {/* Sua Posição Card */}
-              <div className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-purple-400 font-bold mb-1">🏅 Sua Pontuação</div>
-                  <div className="text-3xl font-extrabold text-white mt-1">
+              <div className="glass-card rounded-lg p-3 md:p-6 flex flex-col justify-center items-center text-center md:items-start md:text-left aspect-square md:aspect-auto transition-all duration-300">
+                <div className="flex flex-col items-center text-center md:items-start md:text-left">
+                  <div className="text-[9px] md:text-xs uppercase tracking-wider text-purple-400 font-bold mb-1 truncate">🏅 Pontos <span className="hidden md:inline">Ganhos</span></div>
+                  <div className="text-base sm:text-lg md:text-3xl font-black text-white mt-1">
                     {selectedUserStats ? `${selectedUserStats.pontos_total} pts` : '0 pts'}
                   </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-4">
+                <div className="md:hidden mt-2 text-[9px] text-gray-550 font-semibold">
+                  {selectedUserStats ? `${selectedUserStats.posicao}º lugar` : 'Sem ranking'}
+                </div>
+                <div className="hidden md:block text-xs text-gray-400 mt-4">
                   {selectedUserStats 
                     ? `Você está no ${selectedUserStats.posicao}º lugar do ranking` 
                     : 'Você ainda não está pontuando'}
@@ -1113,7 +1211,7 @@ export default function Home() {
               </div>
 
               {/* Grupo / Tag Card */}
-              <div id="seus-grupos-card" className="glass-card rounded-lg p-6 flex flex-col justify-between transition-all duration-300">
+              <div id="seus-grupos-card" className="col-span-3 sm:col-span-1 glass-card rounded-lg p-4 md:p-6 flex flex-col justify-between transition-all duration-300">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-orange-400 font-bold mb-1">👥 Seus Grupos ({userGroups.length})</div>
                   
@@ -1145,7 +1243,7 @@ export default function Home() {
                         placeholder="Código do Grupo"
                         value={groupCode}
                         onChange={(e) => setGroupCode(e.target.value)}
-                        className="h-8 px-2.5 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded text-xs font-bold w-full text-white placeholder-gray-600 outline-none transition-all"
+                        className="h-8 px-2.5 bg-[#161616] border border-gray-805 focus:border-blue-500 rounded text-xs font-bold w-full text-white placeholder-gray-600 outline-none transition-all"
                       />
                       <button
                         onClick={() => handleJoinGroup(groupCode)}
@@ -1157,7 +1255,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-4">
+                <div className="hidden md:block text-xs text-gray-400 mt-4">
                   Participe de múltiplos grupos!
                 </div>
               </div>
@@ -1166,7 +1264,7 @@ export default function Home() {
             {/* Split Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Matches Column (Left) */}
-              <div id="palpites-disponiveis" className="lg:col-span-2 space-y-6">
+              <div id="palpites-disponiveis" className="lg:col-span-2 space-y-6 order-2 lg:order-1">
                 <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                   <Events size={20} className="text-indigo-400" /> Palpites Disponíveis
                 </h2>
@@ -1241,6 +1339,7 @@ export default function Home() {
                                 min="0"
                                 value={pred.palpite_casa}
                                 onChange={(e) => handleScoreChange(match.id, 'home', e.target.value)}
+                                onBlur={() => triggerImmediateSave(match.id)}
                                 disabled={isInputLocked}
                                 className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="0"
@@ -1251,6 +1350,7 @@ export default function Home() {
                                 min="0"
                                 value={pred.palpite_fora}
                                 onChange={(e) => handleScoreChange(match.id, 'away', e.target.value)}
+                                onBlur={() => triggerImmediateSave(match.id)}
                                 disabled={isInputLocked}
                                 className="w-10 h-10 text-center bg-gray-900 border border-gray-800 focus:border-blue-500 rounded font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="0"
@@ -1304,37 +1404,31 @@ export default function Home() {
                                 </div>
                               ) : (
                                 /* Normal editable state */
-                                <>
-                                  <button
-                                    onClick={() => submitPrediction(match.id)}
-                                    disabled={savingBetId === match.id || isGroupRequiredLocked}
-                                    className={`w-full md:w-auto px-4 py-2 font-bold text-xs rounded border-0 text-white cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                                      pred.saved 
-                                        ? 'bg-emerald-600 hover:bg-emerald-700' 
-                                        : 'bg-blue-600 hover:bg-blue-700'
-                                    }`}
-                                  >
-                                    {savingBetId === match.id 
-                                      ? 'Salvando...' 
-                                      : pred.saved 
-                                        ? '✓ Salvo' 
-                                        : 'Salvar'}
-                                  </button>
-                                  
-                                  <span className="text-[9px] font-bold text-gray-500 flex items-center gap-1 mt-1">
-                                    {pred.saved ? (
-                                      <>
-                                        <CheckmarkFilled size={12} className="text-emerald-400" />
-                                        Palpite gravado
-                                      </>
-                                    ) : (
-                                      <>
-                                        <WarningFilled size={12} className="text-orange-400" />
-                                        Alterações pendentes
-                                      </>
-                                    )}
+                                <div className="flex flex-col items-center md:items-end gap-1.5 w-full md:w-auto">
+                                  {savingBetId === match.id ? (
+                                    <span className="px-3 py-1.5 text-xs font-bold rounded bg-blue-950/40 text-blue-400 border border-blue-500/20 flex items-center gap-1.5 animate-pulse w-full md:w-auto justify-center">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-ping"></span>
+                                      Salvando...
+                                    </span>
+                                  ) : pred.saved ? (
+                                    <span className="px-3 py-1.5 text-xs font-bold rounded bg-emerald-950/40 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 w-full md:w-auto justify-center">
+                                      <CheckmarkFilled size={14} className="text-emerald-400" />
+                                      Salvo
+                                    </span>
+                                  ) : (pred.palpite_casa !== '' && pred.palpite_fora !== '') ? (
+                                    <span className="px-3 py-1.5 text-xs font-bold rounded bg-orange-950/40 text-orange-400 border border-orange-500/20 flex items-center gap-1 w-full md:w-auto justify-center">
+                                      <WarningFilled size={14} className="text-orange-400" />
+                                      Digitando...
+                                    </span>
+                                  ) : (
+                                    <span className="px-3 py-1.5 text-xs font-bold rounded bg-gray-900 text-gray-500 border border-gray-800 w-full md:w-auto text-center">
+                                      Pendente
+                                    </span>
+                                  )}
+                                  <span className="text-[9px] text-gray-500 font-semibold uppercase tracking-wider text-center md:text-right">
+                                    Salvamento Automático
                                   </span>
-                                </>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -1347,13 +1441,16 @@ export default function Home() {
               </div>
 
               {/* Ranking Column (Right) */}
-              <div id="classificacao-geral" className="lg:col-span-1">
+              <div id="classificacao-geral" className="lg:col-span-1 order-1 lg:order-2">
                 <div className="glass-panel border-gray-900 p-6 shadow-xl sticky top-20 rounded-lg">
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="flex justify-between items-center mb-4 gap-2 flex-wrap sm:flex-nowrap">
                     <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2 m-0">
                       <Trophy size={18} className="text-amber-400" />
                       {rankingFilter === 'GERAL' ? 'Classificação Geral' : `Grupo: ${rankingFilter}`}
                     </h2>
+                    <span className="text-[10px] font-extrabold text-gray-400 bg-gray-950 px-2 py-1 border border-gray-850 rounded whitespace-nowrap">
+                      {rankingFilter === 'GERAL' ? ranking.length : groupRanking.length} no grupo
+                    </span>
                   </div>
 
                   {userGroups.length > 0 && (

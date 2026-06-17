@@ -14,9 +14,46 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { matchId } = params;
     
+    // 1. Fetch match to check kickoff time and status
+    const { data: match, error: matchError } = await supabase
+      .from('matches')
+      .select('data, status')
+      .eq('id', matchId)
+      .single();
+
+    if (matchError || !match) {
+      return NextResponse.json({ error: 'Partida não encontrada' }, { status: 404 });
+    }
+
+    const kickoffTime = new Date(match.data);
+    const now = new Date();
+    const hasStarted = kickoffTime <= now || match.status !== 'SCHEDULED';
+
+    if (!hasStarted) {
+      return NextResponse.json({ 
+        error: 'As apostas só podem ser visualizadas após o início da partida.',
+        hasStarted: false,
+        bets: []
+      }, { status: 403 });
+    }
+
+    // 2. Fetch all bets for this match along with user names and groups
     const { data, error } = await supabase
       .from('bets')
-      .select('*')
+      .select(`
+        id,
+        usuario_id,
+        jogo_id,
+        palpite_casa,
+        palpite_fora,
+        resultado_radio,
+        pontos,
+        created_at,
+        users!usuario_id (
+          nome,
+          grupo
+        )
+      `)
       .eq('jogo_id', matchId);
 
     if (error) throw error;

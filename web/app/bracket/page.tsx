@@ -213,14 +213,16 @@ const getFlagUrl = (teamName: string): string => {
 
 // Stage ordering
 const STAGE_ORDER: Record<string, number> = {
-  'LAST_16': 1,
-  'QUARTER_FINALS': 2,
-  'SEMI_FINALS': 3,
-  'THIRD_PLACE': 4,
-  'FINAL': 5
+  'LAST_32': 1,
+  'LAST_16': 2,
+  'QUARTER_FINALS': 3,
+  'SEMI_FINALS': 4,
+  'THIRD_PLACE': 5,
+  'FINAL': 6
 };
 
 const STAGE_LABELS: Record<string, string> = {
+  'LAST_32': 'Fase de 32 (16-Avos)',
   'LAST_16': 'Oitavas de Final',
   'QUARTER_FINALS': 'Quartas de Final',
   'SEMI_FINALS': 'Semifinais',
@@ -236,7 +238,7 @@ export default function BracketPage() {
   const [loggedUser, setLoggedUser] = useState<User | null>(null);
   
   const [loading, setLoading] = useState(true);
-  const [selectedStageTab, setSelectedStageTab] = useState<string>('LAST_16'); // for mobile tabs
+  const [selectedStageTab, setSelectedStageTab] = useState<string>('LAST_32'); // for mobile tabs
 
   useEffect(() => {
     loadInitialData();
@@ -524,9 +526,8 @@ export default function BracketPage() {
               </div>
             </div>
 
-            {/* DESKTOP LAYOUT: Full Tree Columns with Horizontal Scroll */}
             <div className="hidden md:block w-full overflow-x-auto py-8 px-4 border border-gray-900 bg-[#161616]/20 backdrop-blur-md rounded-xl select-none">
-              <div className="flex gap-12 min-w-[1200px] items-stretch justify-center h-[600px]">
+              <div className={`flex gap-12 items-stretch justify-center ${activeStages.includes('LAST_32') ? 'min-w-[1600px] h-[1200px]' : 'min-w-[1200px] h-[600px]'}`}>
                 {activeStages.map((stage, stageIndex) => {
                   const stageMatches = matchesByStage[stage] || [];
                   const isFinalRound = stage === 'FINAL' || stage === 'THIRD_PLACE';

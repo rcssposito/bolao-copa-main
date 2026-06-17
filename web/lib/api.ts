@@ -47,6 +47,10 @@ export interface Bet {
   resultado_radio: 'CASA' | 'EMPATE' | 'FORA'
   pontos: number
   created_at: string
+  users?: {
+    nome: string
+    grupo: string | null
+  } | null
 }
 
 export interface AdminBet {
@@ -81,6 +85,7 @@ export interface RankingUser extends User {
 export interface PotInfo {
   valor_por_usuario: number
   usuarios_pagantes: number
+  usuarios_totais: number
   total_pote: number
 }
 
@@ -99,7 +104,8 @@ export const getAvailableMatches = (competition?: string) =>
   api.get<Match[]>('/matches', { params: competition ? { competition } : {} })
 export const getUpcomingMatches = (competition?: string) => 
   api.get<Match[]>('/matches/upcoming', { params: competition ? { competition } : {} })
-export const getFinishedMatches = () => api.get<Match[]>('/matches/finished')
+export const getFinishedMatches = (competition?: string) => 
+  api.get<Match[]>('/matches/finished', { params: competition ? { competition } : {} })
 export const getMatch = (id: string) => api.get<Match>(`/matches/${id}`)
 export const updateMatch = (id: string, data: {
   placar_casa?: number | null;

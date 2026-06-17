@@ -23,13 +23,14 @@ export async function GET(request: NextRequest) {
     let potValue = defaultPotValue;
     let paidCount = 0;
 
-    // 2. Fetch all users who paid
-    const { data: paidUsers, error: usersError } = await supabase
+    // 2. Fetch all users
+    const { data: allUsers, error: usersError } = await supabase
       .from('users')
-      .select('id, grupo')
-      .eq('pagou', true);
+      .select('id, grupo, pagou');
 
     if (usersError) throw usersError;
+
+    let totalCount = 0;
 
     if (group && group.trim() !== '' && group.toUpperCase() !== 'GERAL') {
       const decodedGroup = decodeURIComponent(group).trim().toLowerCase();
@@ -53,15 +54,18 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Count paid users belonging to this group
-      const filteredPaid = (paidUsers || []).filter(user => {
+      // Filter users belonging to this group
+      const filteredUsers = (allUsers || []).filter(user => {
         if (!user.grupo) return false;
         const userGroups = user.grupo.split(',').map((g: string) => g.trim().toLowerCase());
         return userGroups.includes(decodedGroup);
       });
-      paidCount = filteredPaid.length;
+
+      totalCount = filteredUsers.length;
+      paidCount = filteredUsers.filter(u => u.pagou).length;
     } else {
-      paidCount = paidUsers ? paidUsers.length : 0;
+      totalCount = allUsers ? allUsers.length : 0;
+      paidCount = allUsers ? allUsers.filter(u => u.pagou).length : 0;
     }
 
     const totalPot = potValue * paidCount;
@@ -69,6 +73,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       valor_por_usuario: potValue,
       usuarios_pagantes: paidCount,
+      usuarios_totais: totalCount,
       total_pote: totalPot
     });
 

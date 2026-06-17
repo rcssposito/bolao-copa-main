@@ -1,19 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 // GET /api/matches/finished
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const { data, error } = await supabase
+    const { searchParams } = new URL(request.url);
+    const comp = searchParams.get('competition');
+
+    let query = supabase
       .from('matches')
       .select('*')
-      .eq('status', 'FINISHED')
+      .neq('status', 'SCHEDULED')
       .order('data', { ascending: false });
 
+    if (comp) {
+      query = query.eq('competition', comp);
+    }
+
+    const { data, error } = await query;
+
     if (error) throw error;
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
