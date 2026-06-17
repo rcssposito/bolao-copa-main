@@ -431,9 +431,11 @@ export default function ResultsPage() {
                   {/* Left: Match Info & Status */}
                   <div className="flex-1 w-full md:w-auto text-center md:text-left space-y-1.5">
                     <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider flex items-center justify-center md:justify-start gap-1.5">
-                      <span className={`h-1.5 w-1.5 rounded-full ${match.status === 'LIVE' ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`}></span>
+                      <span className={`h-1.5 w-1.5 rounded-full ${match.status === 'LIVE' ? 'bg-red-500 animate-pulse' : match.status === 'SCHEDULED' ? 'bg-amber-500 animate-pulse' : 'bg-gray-500'}`}></span>
                       {match.status === 'LIVE' ? (
                         <span className="text-red-400 font-extrabold animate-pulse">Ao Vivo</span>
+                      ) : match.status === 'SCHEDULED' ? (
+                        <span className="text-amber-400 font-extrabold animate-pulse">Em Andamento</span>
                       ) : (
                         <span className="text-gray-400">Fim de Jogo</span>
                       )}

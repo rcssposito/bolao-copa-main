@@ -9,10 +9,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const comp = searchParams.get('competition');
 
+    const now = new Date().toISOString();
     let query = supabase
       .from('matches')
       .select('*')
-      .neq('status', 'SCHEDULED')
+      .or(`status.neq.SCHEDULED,data.lte.${now}`)
       .order('data', { ascending: false });
 
     if (comp) {
