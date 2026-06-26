@@ -53,15 +53,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return userGroups.includes(decodedGroup.toLowerCase());
     });
 
-    // 3. Get all bets for these matches
+    // 3. Get all bets for these matches (with chunked pagination to bypass 1000 limit)
     let bets: any[] = [];
     if (matchIds.length > 0) {
-      const { data: betsData, error: betsError } = await supabase
-        .from('bets')
-        .select('*')
-        .in('jogo_id', matchIds);
-      if (betsError) throw betsError;
-      bets = betsData || [];
+      let from = 0;
+      const limit = 1000;
+      while (true) {
+        const { data: betsData, error: betsError } = await supabase
+          .from('bets')
+          .select('*')
+          .in('jogo_id', matchIds)
+          .range(from, from + limit - 1);
+        
+        if (betsError) throw betsError;
+        if (!betsData || betsData.length === 0) break;
+        
+        bets = bets.concat(betsData);
+        if (betsData.length < limit) break;
+        from += limit;
+      }
     }
 
     // 4. Map users and compute points and tiebreaker for this competition
