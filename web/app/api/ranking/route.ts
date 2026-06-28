@@ -19,25 +19,49 @@ export async function GET(request: NextRequest) {
       comp = configData?.value || 'WC';
     }
 
-    // 1. Get all matches for this competition
-    const { data: matches, error: matchesError } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('competition', comp);
-
-    if (matchesError) throw matchesError;
+    // 1. Get all matches for this competition (with chunked pagination)
+    let matches: any[] = [];
+    let matchesFrom = 0;
+    const matchesLimit = 1000;
+    while (true) {
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('competition', comp)
+        .order('id')
+        .range(matchesFrom, matchesFrom + matchesLimit - 1);
+      
+      if (matchesError) throw matchesError;
+      if (!matchesData || matchesData.length === 0) break;
+      
+      matches = matches.concat(matchesData);
+      if (matchesData.length < matchesLimit) break;
+      matchesFrom += matchesLimit;
+    }
 
     const matchIds = matches ? matches.map(m => m.id) : [];
     const lastMatch = matches ? matches.find(m => m.is_last_match) : null;
 
-    // 2. Get all users
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('*');
+    // 2. Get all users (with chunked pagination)
+    let users: any[] = [];
+    let usersFrom = 0;
+    const usersLimit = 1000;
+    while (true) {
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('*')
+        .order('id')
+        .range(usersFrom, usersFrom + usersLimit - 1);
+      
+      if (usersError) throw usersError;
+      if (!usersData || usersData.length === 0) break;
+      
+      users = users.concat(usersData);
+      if (usersData.length < usersLimit) break;
+      usersFrom += usersLimit;
+    }
 
-    if (usersError) throw usersError;
-
-    // 3. Get all bets for these matches (with chunked pagination to bypass 1000 limit)
+    // 3. Get all bets for these matches (with chunked pagination and consistent ordering)
     let bets: any[] = [];
     if (matchIds.length > 0) {
       let from = 0;
@@ -47,6 +71,7 @@ export async function GET(request: NextRequest) {
           .from('bets')
           .select('*')
           .in('jogo_id', matchIds)
+          .order('id')
           .range(from, from + limit - 1);
         
         if (betsError) throw betsError;

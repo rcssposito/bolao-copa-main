@@ -221,7 +221,8 @@ export default function AdminMatchesPage() {
 
   // Filter and search states
   const [teamSearch, setTeamSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('SCHEDULED');
+  const [stageFilter, setStageFilter] = useState('');
 
   // Modal Editing States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -231,6 +232,10 @@ export default function AdminMatchesPage() {
   const [editStatus, setEditStatus] = useState<'SCHEDULED' | 'FINISHED' | 'LIVE' | 'POSTPONED'>('SCHEDULED');
   const [editDecididoPor, setEditDecididoPor] = useState<'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT'>('REGULAR');
   const [editVencedorFinal, setEditVencedorFinal] = useState<'CASA' | 'FORA' | 'EMPATE' | ''>('');
+  const [editTimeCasa, setEditTimeCasa] = useState<string>('');
+  const [editTimeFora, setEditTimeFora] = useState<string>('');
+  const [editStage, setEditStage] = useState<string>('GROUP_STAGE');
+  const [editData, setEditData] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -295,7 +300,7 @@ export default function AdminMatchesPage() {
   const loadMatches = async (compCode: string) => {
     try {
       setLoading(true);
-      const res = await getAvailableMatches(compCode);
+      const res = await getAvailableMatches(compCode, true);
       // Sort matches by date ascending
       const sorted = [...res.data].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
       setMatches(sorted);
@@ -313,10 +318,20 @@ export default function AdminMatchesPage() {
     setEditStatus(match.status);
     
     // Check extra fields in DB
-    // Cast match since ts types in Match interface might not have decidido_por explicitly
     const matchExt = match as any;
     setEditDecididoPor(matchExt.decidido_por || 'REGULAR');
     setEditVencedorFinal(matchExt.vencedor_final || '');
+    setEditTimeCasa(match.time_casa || '');
+    setEditTimeFora(match.time_fora || '');
+    setEditStage(match.stage || 'GROUP_STAGE');
+    
+    if (match.data) {
+      const d = new Date(match.data);
+      const tzOffset = d.getTimezoneOffset() * 60000;
+      setEditData(new Date(d.getTime() - tzOffset).toISOString().slice(0, 16));
+    } else {
+      setEditData('');
+    }
     
     setIsEditModalOpen(true);
   };
@@ -328,7 +343,13 @@ export default function AdminMatchesPage() {
     try {
       setSaving(true);
       
+      const utcData = editData ? new Date(editData).toISOString() : selectedMatch.data;
+      
       const payload: any = {
+        time_casa: editTimeCasa,
+        time_fora: editTimeFora,
+        stage: editStage,
+        data: utcData,
         placar_casa: editHomeScore === '' ? null : parseInt(editHomeScore, 10),
         placar_fora: editAwayScore === '' ? null : parseInt(editAwayScore, 10),
         status: editStatus,
@@ -357,8 +378,9 @@ export default function AdminMatchesPage() {
                         match.time_fora.toLowerCase().includes(search);
     
     const matchesStatus = !statusFilter || match.status === statusFilter;
+    const matchesStage = !stageFilter || match.stage === stageFilter;
     
-    return matchesTeam && matchesStatus;
+    return matchesTeam && matchesStatus && matchesStage;
   });
 
   if (authLoading) {
@@ -422,7 +444,7 @@ export default function AdminMatchesPage() {
 
         {/* Filters Panel */}
         <div className="glass-card p-6 mb-8 rounded-lg">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Select Competition */}
             <div className="flex flex-col gap-1 w-full text-left">
               <label htmlFor="select-competition" className="text-xs font-bold text-gray-400">
@@ -471,6 +493,28 @@ export default function AdminMatchesPage() {
                 <option value="LIVE">Ao Vivo</option>
                 <option value="FINISHED">Finalizado</option>
                 <option value="POSTPONED">Adiado</option>
+              </select>
+            </div>
+
+            {/* Filter by Stage */}
+            <div className="flex flex-col gap-1 w-full text-left">
+              <label htmlFor="filter-stage" className="text-xs font-bold text-gray-400">
+                ⚡ Filtrar por Fase
+              </label>
+              <select
+                id="filter-stage"
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
+              >
+                <option value="">Todas as fases</option>
+                <option value="GROUP_STAGE">Fase de Grupos</option>
+                <option value="LAST_32">Fase de 32 (16-Avos)</option>
+                <option value="LAST_16">Oitavas de Final</option>
+                <option value="QUARTER_FINALS">Quartas de Final</option>
+                <option value="SEMI_FINALS">Semifinais</option>
+                <option value="THIRD_PLACE">Terceiro Lugar</option>
+                <option value="FINAL">Grande Final</option>
               </select>
             </div>
           </div>
@@ -622,27 +666,46 @@ export default function AdminMatchesPage() {
             </div>
             
             <form onSubmit={handleSaveMatchScore} className="space-y-4">
-              {/* Match Details Display */}
-              <div className="flex justify-center items-center gap-3 bg-gray-950/50 border border-gray-850 p-3 rounded-lg text-sm text-gray-200">
-                <div className="flex items-center gap-1.5 font-bold">
-                  {getFlagUrl(selectedMatch.time_casa) && (
-                    <img src={getFlagUrl(selectedMatch.time_casa)} alt="" className="w-4 h-3 object-cover rounded shadow" />
-                  )}
-                  {selectedMatch.time_casa}
+              {/* Time Casa / Time Fora Inputs */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1 text-left">
+                  <label htmlFor="modal-time-casa" className="text-xs font-bold text-gray-400 flex items-center gap-1.5">
+                    {getFlagUrl(editTimeCasa) && (
+                      <img src={getFlagUrl(editTimeCasa)} alt="" className="w-4 h-3 object-cover rounded shadow" />
+                    )}
+                    Time Casa
+                  </label>
+                  <input
+                    id="modal-time-casa"
+                    type="text"
+                    required
+                    value={editTimeCasa}
+                    onChange={(e) => setEditTimeCasa(e.target.value)}
+                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-semibold text-sm text-white outline-none"
+                  />
                 </div>
-                <span className="text-[10px] text-gray-500 font-bold uppercase">vs</span>
-                <div className="flex items-center gap-1.5 font-bold">
-                  {getFlagUrl(selectedMatch.time_fora) && (
-                    <img src={getFlagUrl(selectedMatch.time_fora)} alt="" className="w-4 h-3 object-cover rounded shadow" />
-                  )}
-                  {selectedMatch.time_fora}
+                <div className="flex flex-col gap-1 text-left">
+                  <label htmlFor="modal-time-fora" className="text-xs font-bold text-gray-400 flex items-center gap-1.5">
+                    {getFlagUrl(editTimeFora) && (
+                      <img src={getFlagUrl(editTimeFora)} alt="" className="w-4 h-3 object-cover rounded shadow" />
+                    )}
+                    Time Fora
+                  </label>
+                  <input
+                    id="modal-time-fora"
+                    type="text"
+                    required
+                    value={editTimeFora}
+                    onChange={(e) => setEditTimeFora(e.target.value)}
+                    className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-semibold text-sm text-white outline-none"
+                  />
                 </div>
               </div>
 
               {/* Placar Inputs */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1 text-left">
-                  <label htmlFor="modal-home-score" className="text-xs font-bold text-gray-400">Gols {selectedMatch.time_casa}</label>
+                  <label htmlFor="modal-home-score" className="text-xs font-bold text-gray-400">Gols {editTimeCasa}</label>
                   <input
                     id="modal-home-score"
                     type="number"
@@ -654,7 +717,7 @@ export default function AdminMatchesPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-1 text-left">
-                  <label htmlFor="modal-away-score" className="text-xs font-bold text-gray-400">Gols {selectedMatch.time_fora}</label>
+                  <label htmlFor="modal-away-score" className="text-xs font-bold text-gray-400">Gols {editTimeFora}</label>
                   <input
                     id="modal-away-score"
                     type="number"
@@ -665,6 +728,38 @@ export default function AdminMatchesPage() {
                     className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-bold text-center text-sm text-white outline-none"
                   />
                 </div>
+              </div>
+
+              {/* Fase (Stage) Select */}
+              <div className="flex flex-col gap-1 text-left">
+                <label htmlFor="modal-stage" className="text-xs font-bold text-gray-400">Fase da Partida</label>
+                <select
+                  id="modal-stage"
+                  value={editStage}
+                  onChange={(e) => setEditStage(e.target.value)}
+                  className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
+                >
+                  <option value="GROUP_STAGE">Fase de Grupos (GROUP_STAGE)</option>
+                  <option value="LAST_32">Fase de 32 / 16-Avos (LAST_32)</option>
+                  <option value="LAST_16">Oitavas de Final (LAST_16)</option>
+                  <option value="QUARTER_FINALS">Quartas de Final (QUARTER_FINALS)</option>
+                  <option value="SEMI_FINALS">Semifinais (SEMI_FINALS)</option>
+                  <option value="THIRD_PLACE">Disputa de 3º Lugar (THIRD_PLACE)</option>
+                  <option value="FINAL">Grande Final (FINAL)</option>
+                </select>
+              </div>
+
+              {/* Data/Hora Input */}
+              <div className="flex flex-col gap-1 text-left">
+                <label htmlFor="modal-data" className="text-xs font-bold text-gray-400">Data e Hora do Jogo (Local)</label>
+                <input
+                  id="modal-data"
+                  type="datetime-local"
+                  required
+                  value={editData}
+                  onChange={(e) => setEditData(e.target.value)}
+                  className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all"
+                />
               </div>
 
               {/* Status Select */}

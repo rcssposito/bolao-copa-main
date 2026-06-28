@@ -32,7 +32,9 @@ export async function GET() {
             data,
             status,
             placar_casa,
-            placar_fora
+            placar_fora,
+            stage,
+            competition
           )
         `)
         .order('created_at', { ascending: false })

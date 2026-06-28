@@ -7,13 +7,26 @@ import {
   getAllBets,
   getTags,
   loginUser,
+  getCompetitions,
+  updateBet,
   AdminBet,
   TagItem
 } from '@/lib/api';
 
+const STAGE_LABELS: Record<string, string> = {
+  'GROUP_STAGE': 'Fase de Grupos',
+  'LAST_32': 'Fase de 32 (16-Avos)',
+  'LAST_16': 'Oitavas de Final',
+  'QUARTER_FINALS': 'Quartas de Final',
+  'SEMI_FINALS': 'Semifinais',
+  'THIRD_PLACE': 'Terceiro Lugar',
+  'FINAL': 'Grande Final'
+};
+
 import { 
   ArrowLeft, 
-  Renew
+  Renew,
+  Edit
 } from '@carbon/icons-react';
 
 // Helper function to map team name to flag image URL from FlagCDN
@@ -240,6 +253,65 @@ export default function AdminBetsPage() {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [teamSearch, setTeamSearch] = useState('');
   const [sortOrder, setSortOrder] = useState('newest'); // newest, oldest, points_desc, points_asc
+  const [activeCompetitions, setActiveCompetitions] = useState<{ id: number; name: string; code: string; emblem: string }[]>([]);
+  const [selectedCompCode, setSelectedCompCode] = useState('WC');
+  const [statusFilter, setStatusFilter] = useState('SCHEDULED');
+  const [stageFilter, setStageFilter] = useState('');
+
+  // Modal Editing States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedBet, setSelectedBet] = useState<AdminBet | null>(null);
+  const [editHomePrediction, setEditHomePrediction] = useState<string>('');
+  const [editAwayPrediction, setEditAwayPrediction] = useState<string>('');
+  const [editLoading, setEditLoading] = useState(false);
+
+  const openEditModal = (bet: AdminBet) => {
+    setSelectedBet(bet);
+    setEditHomePrediction(bet.palpite_casa.toString());
+    setEditAwayPrediction(bet.palpite_fora.toString());
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveBet = async () => {
+    if (!selectedBet) return;
+    
+    try {
+      setEditLoading(true);
+      const valCasa = parseInt(editHomePrediction, 10);
+      const valFora = parseInt(editAwayPrediction, 10);
+      
+      if (isNaN(valCasa) || isNaN(valFora)) {
+        alert('Por favor, insira palpites válidos.');
+        return;
+      }
+      
+      const res = await updateBet(selectedBet.id, {
+        palpite_casa: valCasa,
+        palpite_fora: valFora
+      });
+      
+      // Update bet in local state
+      setBets(prev => prev.map(b => {
+        if (b.id === selectedBet.id) {
+          return {
+            ...b,
+            palpite_casa: valCasa,
+            palpite_fora: valFora,
+            pontos: res.data.pontos
+          };
+        }
+        return b;
+      }));
+      
+      setIsEditModalOpen(false);
+      setSelectedBet(null);
+    } catch (error: any) {
+      console.error('Erro ao atualizar aposta:', error);
+      alert('Erro ao salvar palpite: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   useEffect(() => {
     checkAdminAuth();
@@ -268,12 +340,29 @@ export default function AdminBetsPage() {
       }
       
       setIsAuthorized(true);
-      await Promise.all([loadBets(), loadTags()]);
+      await Promise.all([loadBets(), loadTags(), loadCompetitionsList()]);
     } catch (error) {
       console.error('Erro ao autenticar administrador:', error);
       window.location.href = '/';
     } finally {
       setAuthLoading(false);
+    }
+  };
+
+  const loadCompetitionsList = async () => {
+    try {
+      const res = await getCompetitions();
+      const activeListStr = res.data.active || 'WC';
+      const activeCodes = activeListStr.split(',').map((c: string) => c.trim()).filter(Boolean);
+      const allComps = res.data.competitions || [];
+      const activeComps = allComps.filter((c: any) => activeCodes.includes(c.code));
+      
+      setActiveCompetitions(activeComps);
+      if (activeComps.length > 0) {
+        setSelectedCompCode(activeComps[0].code);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar competições:', err);
     }
   };
 
@@ -323,8 +412,17 @@ export default function AdminBetsPage() {
     const teamAway = match?.time_fora?.toLowerCase() || '';
     const team = teamSearch.toLowerCase();
     const matchesTeam = teamHome.includes(team) || teamAway.includes(team);
+
+    // Competition filter
+    const matchesComp = !selectedCompCode || match?.competition === selectedCompCode;
+
+    // Status filter
+    const matchesStatus = !statusFilter || match?.status === statusFilter;
+
+    // Stage filter
+    const matchesStage = !stageFilter || match?.stage === stageFilter;
     
-    return matchesUser && matchesGroup && matchesTeam;
+    return matchesUser && matchesGroup && matchesTeam && matchesComp && matchesStatus && matchesStage;
   });
 
   // Sort bets based on selection
@@ -405,7 +503,82 @@ export default function AdminBetsPage() {
 
         {/* Filters Panel */}
         <div className="glass-card p-6 mb-8 rounded-lg">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            {/* Select Competition */}
+            <div className="flex flex-col gap-1 w-full text-left">
+              <label htmlFor="select-competition" className="text-xs font-bold text-gray-400">
+                🏆 Selecionar Competição
+              </label>
+              <select
+                id="select-competition"
+                value={selectedCompCode}
+                onChange={(e) => setSelectedCompCode(e.target.value)}
+                className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
+              >
+                {activeCompetitions.map(c => (
+                  <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter by Status */}
+            <div className="flex flex-col gap-1 w-full text-left">
+              <label htmlFor="filter-status" className="text-xs font-bold text-gray-400">
+                ↕️ Filtrar por Status
+              </label>
+              <select
+                id="filter-status"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
+              >
+                <option value="">Todos os status</option>
+                <option value="SCHEDULED">Agendado</option>
+                <option value="LIVE">Ao Vivo</option>
+                <option value="FINISHED">Finalizado</option>
+                <option value="POSTPONED">Adiado</option>
+              </select>
+            </div>
+
+            {/* Filter by Stage */}
+            <div className="flex flex-col gap-1 w-full text-left">
+              <label htmlFor="filter-stage" className="text-xs font-bold text-gray-400">
+                ⚡ Filtrar por Fase
+              </label>
+              <select
+                id="filter-stage"
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white outline-none transition-all cursor-pointer"
+              >
+                <option value="">Todas as fases</option>
+                <option value="GROUP_STAGE">Fase de Grupos</option>
+                <option value="LAST_32">Fase de 32 (16-Avos)</option>
+                <option value="LAST_16">Oitavas de Final</option>
+                <option value="QUARTER_FINALS">Quartas de Final</option>
+                <option value="SEMI_FINALS">Semifinais</option>
+                <option value="THIRD_PLACE">Terceiro Lugar</option>
+                <option value="FINAL">Grande Final</option>
+              </select>
+            </div>
+
+            {/* Filter by Team/Match */}
+            <div className="flex flex-col gap-1 w-full text-left">
+              <label htmlFor="search-team" className="text-xs font-bold text-gray-400">
+                ⚽ Filtrar por Time / Partida
+              </label>
+              <input
+                id="search-team"
+                type="text"
+                placeholder="Ex: Brasil, Alemanha..."
+                value={teamSearch}
+                onChange={(e) => setTeamSearch(e.target.value)}
+                className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search Participant */}
             <div className="flex flex-col gap-1 w-full text-left">
               <label htmlFor="search-user" className="text-xs font-bold text-gray-400 flex items-center gap-1">
@@ -440,21 +613,6 @@ export default function AdminBetsPage() {
               </select>
             </div>
 
-            {/* Filter by Team/Match */}
-            <div className="flex flex-col gap-1 w-full text-left">
-              <label htmlFor="search-team" className="text-xs font-bold text-gray-400">
-                ⚽ Filtrar por Time / Partida
-              </label>
-              <input
-                id="search-team"
-                type="text"
-                placeholder="Ex: Brasil, Alemanha..."
-                value={teamSearch}
-                onChange={(e) => setTeamSearch(e.target.value)}
-                className="w-full h-10 px-3 bg-[#161616] border border-gray-800 focus:border-blue-500 rounded font-medium text-sm text-white placeholder-gray-600 outline-none transition-all"
-              />
-            </div>
-
             {/* Sort Order */}
             <div className="flex flex-col gap-1 w-full text-left">
               <label htmlFor="sort-order" className="text-xs font-bold text-gray-400">
@@ -482,13 +640,15 @@ export default function AdminBetsPage() {
                 <span> (filtrado de um total de <span className="font-bold text-white">{bets.length}</span>)</span>
               )}
             </div>
-            {(searchTerm || selectedGroup || teamSearch) && (
+            {(searchTerm || selectedGroup || teamSearch || statusFilter !== 'SCHEDULED' || stageFilter) && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchTerm('');
                   setSelectedGroup('');
                   setTeamSearch('');
+                  setStatusFilter('SCHEDULED');
+                  setStageFilter('');
                   setSortOrder('newest');
                 }}
                 className="text-xs text-indigo-400 hover:text-indigo-300 font-bold bg-transparent border-0 cursor-pointer p-0"
@@ -512,6 +672,7 @@ export default function AdminBetsPage() {
                   <th className="py-4 px-6 text-center w-36">Placar Real</th>
                   <th className="py-4 px-6 text-center w-28">Pontos Obtidos</th>
                   <th className="py-4 px-6 w-52">Horário da Aposta</th>
+                  <th className="py-4 px-6 text-center w-28">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800/60 text-gray-300">
@@ -556,29 +717,36 @@ export default function AdminBetsPage() {
                       {/* Match */}
                       <td className="py-3.5 px-6">
                         {match ? (
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1.5 min-w-[120px] justify-end text-right">
-                              <span className="text-xs font-semibold text-gray-200">{match.time_casa}</span>
-                              {flagCasa && (
-                                <img
-                                  src={flagCasa}
-                                  alt={match.time_casa}
-                                  className="w-4 h-3 object-cover rounded shadow-sm shrink-0"
-                                />
-                              )}
+                          <div className="flex flex-col gap-0.5 text-left">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-1.5 min-w-[120px] justify-end text-right">
+                                <span className="text-xs font-semibold text-gray-200">{match.time_casa}</span>
+                                {flagCasa && (
+                                  <img
+                                    src={flagCasa}
+                                    alt={match.time_casa}
+                                    className="w-4 h-3 object-cover rounded shadow-sm shrink-0"
+                                  />
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold text-gray-500 uppercase">vs</span>
+                              <div className="flex items-center gap-1.5 min-w-[120px]">
+                                {flagFora && (
+                                  <img
+                                    src={flagFora}
+                                    alt={match.time_fora}
+                                    className="w-4 h-3 object-cover rounded shadow-sm shrink-0"
+                                  />
+                                )}
+                                <span className="text-xs font-semibold text-gray-200">{match.time_fora}</span>
+                              </div>
+                              {statusBadge && <div className="ml-1 shrink-0">{statusBadge}</div>}
                             </div>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase">vs</span>
-                            <div className="flex items-center gap-1.5 min-w-[120px]">
-                              {flagFora && (
-                                <img
-                                  src={flagFora}
-                                  alt={match.time_fora}
-                                  className="w-4 h-3 object-cover rounded shadow-sm shrink-0"
-                                />
-                              )}
-                              <span className="text-xs font-semibold text-gray-200">{match.time_fora}</span>
-                            </div>
-                            {statusBadge && <div className="ml-1 shrink-0">{statusBadge}</div>}
+                            {match.stage && (
+                              <div className="text-[10px] text-indigo-400 font-extrabold uppercase tracking-wider pl-1">
+                                ⚽ {STAGE_LABELS[match.stage] || match.stage}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-gray-600 italic">Partida inexistente</span>
@@ -622,6 +790,18 @@ export default function AdminBetsPage() {
                       <td className="py-3.5 px-6 text-gray-400 text-xs font-medium font-mono">
                         {formattedTime}
                       </td>
+
+                      {/* Ações */}
+                      <td className="py-3.5 px-6 text-center">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(bet)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600/10 hover:bg-blue-600/25 text-blue-400 font-bold rounded text-[11px] border border-blue-500/20 cursor-pointer transition-colors"
+                        >
+                          <Edit size={12} />
+                          Editar
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -639,6 +819,119 @@ export default function AdminBetsPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Bet Modal */}
+      {isEditModalOpen && selectedBet && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card max-w-md w-full overflow-hidden rounded-xl border border-gray-800 shadow-2xl animate-fade-in text-left">
+            {/* Modal Header */}
+            <div className="bg-[#161616] px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-white">Editar Palpite</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setSelectedBet(null);
+                }}
+                className="text-gray-400 hover:text-white cursor-pointer bg-transparent border-0 font-bold text-lg"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 flex flex-col gap-5">
+              {/* Context: User */}
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Participante</label>
+                <div className="text-sm font-semibold text-white mt-0.5">{selectedBet.users?.nome}</div>
+                <div className="text-xs text-gray-400">{selectedBet.users?.email}</div>
+              </div>
+
+              {/* Context: Match */}
+              {selectedBet.matches && (
+                <div className="bg-gray-950/45 p-3 rounded-lg border border-gray-800/80">
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-wider block mb-1.5">Partida</label>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      {getFlagUrl(selectedBet.matches.time_casa) && (
+                        <img
+                          src={getFlagUrl(selectedBet.matches.time_casa)}
+                          alt=""
+                          className="w-4 h-3 object-cover rounded shadow-sm shrink-0"
+                        />
+                      )}
+                      <span className="font-semibold text-gray-200">{selectedBet.matches.time_casa}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-500">VS</span>
+                    <div className="flex items-center gap-2">
+                      {getFlagUrl(selectedBet.matches.time_fora) && (
+                        <img
+                          src={getFlagUrl(selectedBet.matches.time_fora)}
+                          alt=""
+                          className="w-4 h-3 object-cover rounded shadow-sm shrink-0"
+                        />
+                      )}
+                      <span className="font-semibold text-gray-200">{selectedBet.matches.time_fora}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Edit Inputs */}
+              <div className="flex items-center justify-center gap-6 py-2">
+                {/* Home Prediction */}
+                <div className="flex flex-col items-center gap-1.5 w-20">
+                  <span className="text-[10px] font-bold text-gray-400 text-center uppercase tracking-wider truncate w-full">Casa</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editHomePrediction}
+                    onChange={(e) => setEditHomePrediction(e.target.value)}
+                    className="w-16 h-12 text-center bg-[#161616] border border-gray-800 focus:border-blue-500 rounded-lg font-bold text-xl text-white outline-none transition-all"
+                  />
+                </div>
+
+                <span className="text-xl font-bold text-gray-600 mt-5">x</span>
+
+                {/* Away Prediction */}
+                <div className="flex flex-col items-center gap-1.5 w-20">
+                  <span className="text-[10px] font-bold text-gray-400 text-center uppercase tracking-wider truncate w-full">Fora</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editAwayPrediction}
+                    onChange={(e) => setEditAwayPrediction(e.target.value)}
+                    className="w-16 h-12 text-center bg-[#161616] border border-gray-800 focus:border-blue-500 rounded-lg font-bold text-xl text-white outline-none transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-[#161616] px-6 py-4 border-t border-gray-800 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setSelectedBet(null);
+                }}
+                className="px-4 py-2 border border-gray-800 hover:bg-gray-800 text-gray-400 hover:text-white font-bold rounded text-xs cursor-pointer transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveBet}
+                disabled={editLoading}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-xs border-0 cursor-pointer disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              >
+                {editLoading ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

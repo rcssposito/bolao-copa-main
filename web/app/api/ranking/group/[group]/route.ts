@@ -29,23 +29,47 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       comp = configData?.value || 'WC';
     }
 
-    // 1. Get all matches for this competition
-    const { data: matches, error: matchesError } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('competition', comp);
-
-    if (matchesError) throw matchesError;
+    // 1. Get all matches for this competition (with chunked pagination)
+    let matches: any[] = [];
+    let matchesFrom = 0;
+    const matchesLimit = 1000;
+    while (true) {
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('competition', comp)
+        .order('id')
+        .range(matchesFrom, matchesFrom + matchesLimit - 1);
+      
+      if (matchesError) throw matchesError;
+      if (!matchesData || matchesData.length === 0) break;
+      
+      matches = matches.concat(matchesData);
+      if (matchesData.length < matchesLimit) break;
+      matchesFrom += matchesLimit;
+    }
 
     const matchIds = matches ? matches.map(m => m.id) : [];
     const lastMatch = matches ? matches.find(m => m.is_last_match) : null;
 
-    // 2. Get all users and filter by group (split by comma for multi-group support)
-    const { data: allUsers, error: usersError } = await supabase
-      .from('users')
-      .select('*');
-
-    if (usersError) throw usersError;
+    // 2. Get all users and filter by group (with chunked pagination)
+    let allUsers: any[] = [];
+    let usersFrom = 0;
+    const usersLimit = 1000;
+    while (true) {
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('*')
+        .order('id')
+        .range(usersFrom, usersFrom + usersLimit - 1);
+      
+      if (usersError) throw usersError;
+      if (!usersData || usersData.length === 0) break;
+      
+      allUsers = allUsers.concat(usersData);
+      if (usersData.length < usersLimit) break;
+      usersFrom += usersLimit;
+    }
 
     const users = (allUsers || []).filter(user => {
       if (!user.grupo) return false;
@@ -53,9 +77,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return userGroups.includes(decodedGroup.toLowerCase());
     });
 
-    // 3. Get all bets for these matches (with chunked pagination to bypass 1000 limit)
+    // 3. Get all bets for these matches and users in the group (with chunked pagination)
     let bets: any[] = [];
-    if (matchIds.length > 0) {
+    const userIds = users.map(u => u.id);
+    if (matchIds.length > 0 && userIds.length > 0) {
       let from = 0;
       const limit = 1000;
       while (true) {
@@ -63,6 +88,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           .from('bets')
           .select('*')
           .in('jogo_id', matchIds)
+          .in('usuario_id', userIds)
+          .order('id')
           .range(from, from + limit - 1);
         
         if (betsError) throw betsError;

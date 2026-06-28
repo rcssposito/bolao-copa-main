@@ -22,19 +22,37 @@ export async function GET(request: NextRequest) {
       comp = comp.split(',')[0].trim();
     }
 
+    const all = searchParams.get('all') === 'true';
+
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() + 30);
 
-    const { data, error } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('status', 'SCHEDULED')
-      .eq('competition', comp)
-      .lte('data', limitDate.toISOString())
-      .order('data', { ascending: true });
+    let allMatches: any[] = [];
+    let from = 0;
+    const limit = 1000;
+    while (true) {
+      let query = supabase
+        .from('matches')
+        .select('*')
+        .eq('competition', comp)
+        .order('data', { ascending: true })
+        .range(from, from + limit - 1);
 
-    if (error) throw error;
-    return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
+      if (!all) {
+        query = query.eq('status', 'SCHEDULED')
+                     .lte('data', limitDate.toISOString());
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+
+      allMatches = allMatches.concat(data);
+      if (data.length < limit) break;
+      from += limit;
+    }
+
+    return NextResponse.json(allMatches, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

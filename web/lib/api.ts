@@ -74,6 +74,8 @@ export interface AdminBet {
     status: 'SCHEDULED' | 'FINISHED' | 'LIVE' | 'POSTPONED'
     placar_casa: number | null
     placar_fora: number | null
+    stage?: string
+    competition?: string
   } | null
 }
 
@@ -100,14 +102,22 @@ export const deleteUser = (id: string) => api.delete<{ message: string }>(`/admi
 export const loginUser = (data: { email: string; nome: string; code?: string }) => api.post<User>('/users/login', data)
 
 // Matches
-export const getAvailableMatches = (competition?: string) => 
-  api.get<Match[]>('/matches', { params: competition ? { competition } : {} })
+export const getAvailableMatches = (competition?: string, all?: boolean) => 
+  api.get<Match[]>('/matches', { 
+    params: { 
+      ...(competition ? { competition } : {}), 
+      ...(all ? { all: 'true' } : {}) 
+    } 
+  })
 export const getUpcomingMatches = (competition?: string) => 
   api.get<Match[]>('/matches/upcoming', { params: competition ? { competition } : {} })
 export const getFinishedMatches = (competition?: string) => 
   api.get<Match[]>('/matches/finished', { params: competition ? { competition } : {} })
 export const getMatch = (id: string) => api.get<Match>(`/matches/${id}`)
 export const updateMatch = (id: string, data: {
+  time_casa?: string;
+  time_fora?: string;
+  data?: string;
   placar_casa?: number | null;
   placar_fora?: number | null;
   status?: 'SCHEDULED' | 'FINISHED' | 'LIVE' | 'POSTPONED';
@@ -125,6 +135,9 @@ export const createBet = (data: {
   palpite_fora: number
   resultado_radio: 'CASA' | 'EMPATE' | 'FORA'
 }) => api.post<Bet>('/bets', data)
+
+export const updateBet = (id: string, data: { palpite_casa: number; palpite_fora: number }) => 
+  api.put<Bet>(`/bets/${id}`, data)
 
 export const getUserBets = (userId: string) => api.get<Bet[]>(`/bets/user/${userId}`)
 export const getMatchBets = (matchId: string) => api.get<Bet[]>(`/bets/match/${matchId}`)

@@ -137,6 +137,44 @@ export async function syncMatches(apiKey: string): Promise<number> {
 }
 
 /**
+ * Calcula os pontos de todas as apostas de um jogo finalizado específico
+ */
+export async function calculateSingleMatchBets(match: any): Promise<number> {
+  if (match.placar_casa === null || match.placar_fora === null) return 0;
+
+  const { data: bets, error: betError } = await supabase
+    .from('bets')
+    .select('*')
+    .eq('jogo_id', match.id);
+
+  if (betError) throw betError;
+  if (!bets || bets.length === 0) return 0;
+
+  // Executa os updates em paralelo para máxima performance
+  const promises = bets.map(bet => {
+    const points = calculatePoints(
+      bet.palpite_casa,
+      bet.palpite_fora,
+      match.placar_casa,
+      match.placar_fora,
+      match.decidido_por,
+      match.vencedor_final
+    );
+    return supabase
+      .from('bets')
+      .update({ pontos: points })
+      .eq('id', bet.id);
+  });
+
+  const results = await Promise.all(promises);
+  for (const res of results) {
+    if (res.error) throw res.error;
+  }
+
+  return bets.length;
+}
+
+/**
  * Calcula os pontos de todas as apostas de jogos finalizados
  */
 export async function calculateAllBets(): Promise<number> {
@@ -148,10 +186,11 @@ export async function calculateAllBets(): Promise<number> {
   if (matchError) throw matchError;
   if (!finishedMatches) return 0;
 
-  let calculatedCount = 0;
+  let totalCalculated = 0;
 
-  for (const match of finishedMatches) {
-    if (match.placar_casa === null || match.placar_fora === null) continue;
+  // Processa cada jogo finalizado em paralelo
+  const matchPromises = finishedMatches.map(async (match) => {
+    if (match.placar_casa === null || match.placar_fora === null) return 0;
 
     const { data: bets, error: betError } = await supabase
       .from('bets')
@@ -159,9 +198,9 @@ export async function calculateAllBets(): Promise<number> {
       .eq('jogo_id', match.id);
 
     if (betError) throw betError;
-    if (!bets) continue;
+    if (!bets || bets.length === 0) return 0;
 
-    for (const bet of bets) {
+    const betPromises = bets.map(bet => {
       const points = calculatePoints(
         bet.palpite_casa,
         bet.palpite_fora,
@@ -170,19 +209,24 @@ export async function calculateAllBets(): Promise<number> {
         match.decidido_por,
         match.vencedor_final
       );
-
-      const { error: updateError } = await supabase
+      return supabase
         .from('bets')
         .update({ pontos: points })
         .eq('id', bet.id);
+    });
 
-      if (updateError) throw updateError;
-      
-      calculatedCount++;
+    const results = await Promise.all(betPromises);
+    for (const res of results) {
+      if (res.error) throw res.error;
     }
-  }
 
-  return calculatedCount;
+    return bets.length;
+  });
+
+  const counts = await Promise.all(matchPromises);
+  totalCalculated = counts.reduce((a, b) => a + b, 0);
+
+  return totalCalculated;
 }
 
 /**
@@ -196,9 +240,8 @@ export async function updateUserTotals(): Promise<number> {
   if (usersError) throw usersError;
   if (!users) return 0;
 
-  let updatedCount = 0;
-
-  for (const user of users) {
+  // Executa o cálculo e atualização de todos os usuários em paralelo
+  const promises = users.map(async (user) => {
     const { data: bets, error: betError } = await supabase
       .from('bets')
       .select('pontos')
@@ -214,11 +257,10 @@ export async function updateUserTotals(): Promise<number> {
       .eq('id', user.id);
 
     if (updateError) throw updateError;
+  });
 
-    updatedCount++;
-  }
-
-  return updatedCount;
+  await Promise.all(promises);
+  return users.length;
 }
 
 /**

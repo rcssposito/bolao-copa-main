@@ -230,6 +230,15 @@ const STAGE_LABELS: Record<string, string> = {
   'FINAL': 'Grande Final'
 };
 
+const STAGE_EXPECTED_COUNT: Record<string, number> = {
+  'LAST_32': 16,
+  'LAST_16': 8,
+  'QUARTER_FINALS': 4,
+  'SEMI_FINALS': 2,
+  'THIRD_PLACE': 1,
+  'FINAL': 1
+};
+
 export default function BracketPage() {
   const [activeCompCode, setActiveCompCode] = useState<string>('WC');
   const [competitions, setCompetitions] = useState<{ id: number; name: string; code: string; emblem: string }[]>([]);
@@ -297,7 +306,7 @@ export default function BracketPage() {
   const loadMatchesForComp = async (compCode: string) => {
     try {
       setLoading(true);
-      const res = await getAvailableMatches(compCode);
+      const res = await getAvailableMatches(compCode, true);
       
       // Filter out group stage matches
       const knockoutMatches = res.data.filter(m => m.stage && m.stage !== 'GROUP_STAGE');
@@ -340,6 +349,26 @@ export default function BracketPage() {
     const matchDate = new Date(match.data);
     const userBet = bets[match.id];
     const matchExt = match as any;
+    
+    const isFinished = match.status === 'FINISHED';
+    const isLive = match.status === 'LIVE';
+    
+    // Determine winner
+    let homeWinner = false;
+    let awayWinner = false;
+    if (isFinished) {
+      if (matchExt.vencedor_final === 'CASA') {
+        homeWinner = true;
+      } else if (matchExt.vencedor_final === 'FORA') {
+        awayWinner = true;
+      } else if (match.placar_casa !== null && match.placar_fora !== null) {
+        if (match.placar_casa > match.placar_fora) {
+          homeWinner = true;
+        } else if (match.placar_fora > match.placar_casa) {
+          awayWinner = true;
+        }
+      }
+    }
 
     return (
       <div 
@@ -362,26 +391,54 @@ export default function BracketPage() {
         <div className="space-y-2">
           {/* Home Team */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 font-bold text-gray-200 truncate pr-2">
+            <div className={`flex items-center gap-2 truncate pr-2 transition-all ${
+              isFinished 
+                ? (homeWinner ? 'font-black text-white' : 'font-medium text-gray-500 opacity-55') 
+                : 'font-bold text-gray-200'
+            }`}>
               {getFlagUrl(match.time_casa) && (
-                <img src={getFlagUrl(match.time_casa)} alt="" className="w-4.5 h-3 object-cover rounded-sm shadow-sm" />
+                <img 
+                  src={getFlagUrl(match.time_casa)} 
+                  alt="" 
+                  className={`w-4.5 h-3 object-cover rounded-sm shadow-sm transition-all ${isFinished && !homeWinner ? 'opacity-40 grayscale' : ''}`} 
+                />
               )}
               <span className="truncate">{match.time_casa}</span>
             </div>
-            <span className={`font-black text-sm px-1.5 py-0.5 rounded ${match.status === 'FINISHED' ? 'text-white bg-slate-900 border border-gray-850' : 'text-gray-500'}`}>
+            <span className={`font-black text-sm px-1.5 py-0.5 rounded transition-all ${
+              isFinished 
+                ? (homeWinner ? 'text-white bg-emerald-950/20 border border-emerald-500/15' : 'text-gray-550 bg-slate-955/40 border border-gray-900 opacity-55') 
+                : isLive 
+                  ? 'text-red-400 bg-red-950/30 border border-red-500/20 animate-pulse'
+                  : 'text-gray-500'
+            }`}>
               {match.placar_casa !== null ? match.placar_casa : '-'}
             </span>
           </div>
 
           {/* Away Team */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 font-bold text-gray-200 truncate pr-2">
+            <div className={`flex items-center gap-2 truncate pr-2 transition-all ${
+              isFinished 
+                ? (awayWinner ? 'font-black text-white' : 'font-medium text-gray-500 opacity-55') 
+                : 'font-bold text-gray-200'
+            }`}>
               {getFlagUrl(match.time_fora) && (
-                <img src={getFlagUrl(match.time_fora)} alt="" className="w-4.5 h-3 object-cover rounded-sm shadow-sm" />
+                <img 
+                  src={getFlagUrl(match.time_fora)} 
+                  alt="" 
+                  className={`w-4.5 h-3 object-cover rounded-sm shadow-sm transition-all ${isFinished && !awayWinner ? 'opacity-40 grayscale' : ''}`} 
+                />
               )}
               <span className="truncate">{match.time_fora}</span>
             </div>
-            <span className={`font-black text-sm px-1.5 py-0.5 rounded ${match.status === 'FINISHED' ? 'text-white bg-slate-900 border border-gray-850' : 'text-gray-500'}`}>
+            <span className={`font-black text-sm px-1.5 py-0.5 rounded transition-all ${
+              isFinished 
+                ? (awayWinner ? 'text-white bg-emerald-950/20 border border-emerald-500/15' : 'text-gray-550 bg-slate-955/40 border border-gray-900 opacity-55') 
+                : isLive 
+                  ? 'text-red-400 bg-red-950/30 border border-red-500/20 animate-pulse'
+                  : 'text-gray-500'
+            }`}>
               {match.placar_fora !== null ? match.placar_fora : '-'}
             </span>
           </div>
@@ -526,62 +583,104 @@ export default function BracketPage() {
               </div>
             </div>
 
-            <div className="hidden md:block w-full overflow-x-auto py-8 px-4 border border-gray-900 bg-[#161616]/20 backdrop-blur-md rounded-xl select-none">
-              <div className={`flex gap-12 items-stretch justify-center ${activeStages.includes('LAST_32') ? 'min-w-[1600px] h-[1200px]' : 'min-w-[1200px] h-[600px]'}`}>
-                {activeStages.map((stage, stageIndex) => {
-                  const stageMatches = matchesByStage[stage] || [];
-                  const isFinalRound = stage === 'FINAL' || stage === 'THIRD_PLACE';
+            {(() => {
+              const baseCellHeight = activeStages.includes('LAST_32') 
+                ? 180 
+                : activeStages.includes('LAST_16') 
+                  ? 240 
+                  : 320;
+              const firstStage = activeStages[0];
+              const firstStageCount = STAGE_EXPECTED_COUNT[firstStage] || 1;
+              const totalHeight = firstStageCount * baseCellHeight;
 
-                  return (
-                    <div 
-                      key={stage} 
-                      className="flex flex-col justify-around items-center w-[280px]"
-                    >
-                      {/* Round Title */}
-                      <div className="text-center font-black text-xs text-gray-400 uppercase tracking-widest pb-3 border-b border-indigo-500/20 w-full mb-4 shrink-0">
-                        {STAGE_LABELS[stage] || stage}
-                      </div>
+              return (
+                <div className="hidden md:block w-full overflow-x-auto py-8 px-4 border border-gray-900 bg-[#161616]/20 backdrop-blur-md rounded-xl select-none">
+                  <div 
+                    style={{ height: `${totalHeight + 80}px` }}
+                    className={`flex gap-12 items-stretch justify-center ${
+                      activeStages.includes('LAST_32') 
+                        ? 'min-w-[1600px]' 
+                        : activeStages.includes('LAST_16')
+                          ? 'min-w-[1400px]'
+                          : 'min-w-[1200px]'
+                    }`}
+                  >
+                    {activeStages.map((stage, stageIndex) => {
+                      const stageMatches = matchesByStage[stage] || [];
+                      const isFinalRound = stage === 'FINAL' || stage === 'THIRD_PLACE';
+                      const expectedCount = STAGE_EXPECTED_COUNT[stage] || 1;
+                      const cellHeight = totalHeight / expectedCount;
 
-                      {/* Matches Cards Column */}
-                      <div className="flex-1 flex flex-col justify-around w-full relative">
-                        {stageMatches.map((match, matchIndex) => {
-                          return (
-                            <div 
-                              key={match.id} 
-                              className="relative py-4 flex items-center justify-center w-full group"
-                            >
-                              {renderMatchCard(match)}
+                      return (
+                        <div 
+                          key={stage} 
+                          className="flex flex-col justify-start items-center w-[280px]"
+                        >
+                          {/* Round Title */}
+                          <div className="text-center font-black text-xs text-gray-400 uppercase tracking-widest pb-3 border-b border-indigo-500/20 w-full mb-4 shrink-0">
+                            {STAGE_LABELS[stage] || stage}
+                          </div>
 
-                              {/* CSS Connector Lines for Tree Bracket Structure */}
-                              {stageIndex < activeStages.length - 1 && !isFinalRound && (
-                                <>
-                                  {/* Right side line extending out of card */}
-                                  <div className="absolute right-[-24px] top-1/2 -translate-y-1/2 w-[24px] h-[2px] bg-gray-800 group-hover:bg-indigo-500/35 transition-colors"></div>
-                                  
-                                  {/* Vertical line connecting to next round pair */}
-                                  {matchIndex % 2 === 0 ? (
-                                    <div className="absolute right-[-24px] top-1/2 w-[2px] h-[calc(50%+24px)] bg-gray-800 group-hover:bg-indigo-500/35 transition-colors origin-top"></div>
-                                  ) : (
-                                    <div className="absolute right-[-24px] bottom-1/2 w-[2px] h-[calc(50%+24px)] bg-gray-800 group-hover:bg-indigo-500/35 transition-colors origin-bottom"></div>
+                          {/* Matches Cards Column */}
+                          <div className="flex-1 flex flex-col justify-start w-full relative">
+                            {stageMatches.map((match, matchIndex) => {
+                              const verticalLineHeight = cellHeight / 2;
+                              
+                              return (
+                                <div 
+                                  key={match.id} 
+                                  style={{ height: `${cellHeight}px` }}
+                                  className="relative flex items-center justify-center w-full group"
+                                >
+                                  {renderMatchCard(match)}
+
+                                  {/* CSS Connector Lines for Tree Bracket Structure */}
+                                  {stageIndex < activeStages.length - 1 && !isFinalRound && stage !== 'SEMI_FINALS' && (
+                                    <>
+                                      {/* Right side line extending out of card */}
+                                      <div className="absolute right-[-24px] top-1/2 -translate-y-1/2 w-[24px] h-[2px] bg-gray-800 group-hover:bg-indigo-500/35 transition-colors"></div>
+                                      
+                                      {/* Vertical line connecting to next round pair */}
+                                      {matchIndex % 2 === 0 ? (
+                                        <>
+                                          {/* Vertical line going down */}
+                                          <div 
+                                            style={{ height: `${verticalLineHeight}px` }}
+                                            className="absolute right-[-24px] top-1/2 w-[2px] bg-gray-800 group-hover:bg-indigo-500/35 transition-colors origin-top"
+                                          ></div>
+                                          {/* Midpoint horizontal line going right */}
+                                          <div 
+                                            style={{ top: `calc(50% + ${verticalLineHeight}px)` }}
+                                            className="absolute right-[-48px] -translate-y-1/2 w-[24px] h-[2px] bg-gray-800 group-hover:bg-indigo-500/35 transition-colors"
+                                          ></div>
+                                        </>
+                                      ) : (
+                                        /* Vertical line going up */
+                                        <div 
+                                          style={{ height: `${verticalLineHeight}px` }}
+                                          className="absolute right-[-24px] bottom-1/2 w-[2px] bg-gray-800 group-hover:bg-indigo-500/35 transition-colors origin-bottom"
+                                        ></div>
+                                      )}
+                                    </>
                                   )}
-                                </>
-                              )}
 
-                              {stageIndex > 0 && !isFinalRound && (
-                                <>
-                                  {/* Left side line extending into card */}
-                                  <div className="absolute left-[-24px] top-1/2 -translate-y-1/2 w-[24px] h-[2px] bg-gray-800 group-hover:bg-indigo-500/35 transition-colors"></div>
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                                  {stageIndex > 0 && !isFinalRound && (
+                                    <>
+                                      {/* Left side line extending into card */}
+                                      <div className="absolute left-[-24px] top-1/2 -translate-y-1/2 w-[24px] h-[2px] bg-gray-800 group-hover:bg-indigo-500/35 transition-colors"></div>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
             
             {/* Navigation Tip */}
             <p className="hidden md:block text-center text-[10px] text-gray-500 font-semibold mt-4">
