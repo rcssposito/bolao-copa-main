@@ -83,13 +83,13 @@ async function propagateMatchWinner(match: any) {
     }
   }
 
-  // 2. Fetch all matches of the current stage sorted by date
+  // 2. Fetch all matches of the current stage sorted by id_api
   const { data: currentStageMatches, error: err1 } = await supabase
     .from('matches')
     .select('*')
     .eq('competition', match.competition)
     .eq('stage', currentStage)
-    .order('data', { ascending: true });
+    .order('id_api', { ascending: true });
 
   if (err1 || !currentStageMatches) {
     console.error('Error fetching current stage matches for propagation:', err1);
@@ -102,13 +102,13 @@ async function propagateMatchWinner(match: any) {
   const nextMatchIndex = Math.floor(matchIndex / 2);
   const isHomeSlot = matchIndex % 2 === 0;
 
-  // 3. Fetch all matches of the next stage sorted by date
+  // 3. Fetch all matches of the next stage sorted by id_api
   const { data: nextStageMatches, error: err2 } = await supabase
     .from('matches')
     .select('*')
     .eq('competition', match.competition)
     .eq('stage', nextStage)
-    .order('data', { ascending: true });
+    .order('id_api', { ascending: true });
 
   if (err2 || !nextStageMatches || nextStageMatches.length === 0) {
     console.error('Error fetching next stage matches for propagation:', err2);
@@ -138,7 +138,7 @@ async function propagateMatchWinner(match: any) {
       .select('*')
       .eq('competition', match.competition)
       .eq('stage', 'THIRD_PLACE')
-      .order('data', { ascending: true });
+      .order('id_api', { ascending: true });
 
     if (err3 || !thirdPlaceMatches || thirdPlaceMatches.length === 0) {
       console.error('Error fetching third place matches for propagation:', err3);

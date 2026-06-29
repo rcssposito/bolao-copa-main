@@ -311,8 +311,8 @@ export default function BracketPage() {
       // Filter out group stage matches
       const knockoutMatches = res.data.filter(m => m.stage && m.stage !== 'GROUP_STAGE');
       
-      // Sort matches chronologically by date
-      knockoutMatches.sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+      // Sort matches by id_api to ensure stable tree structure pairing
+      knockoutMatches.sort((a, b) => (a.id_api || 0) - (b.id_api || 0));
       setMatches(knockoutMatches);
 
       // Auto select tab to the first stage that has matches
